@@ -5,11 +5,11 @@
 using namespace eosio;
 using namespace std;
 
-class dataexchange : public contract {
+class examplecontract : public contract {
     using contract::contract;
 
     public:
-        dataexchange( account_name self ) :
+        examplecontract( account_name self ) :
             contract(self),
             _statuses(_self, _self){}
 
@@ -97,4 +97,4 @@ class dataexchange : public contract {
 
 };
 
-EOSIO_ABI( dataexchange, (test)(wipeall) (get)(erase)(transfer))
+EOSIO_ABI( examplecontract, (test)(wipeall) (get)(erase)(transfer))
