@@ -28,9 +28,7 @@ class dataexchange : public contract {
 
         // @abi action
         void createmarket( name creator, string marketname){
-	        eosio::print(eosio::name{creator});
-	        eosio::print("\r\n");
-	        eosio::print(marketname.c_str());
+            if (marketname.length() > 30) eosio_assert(false, "marketname should be less than 30 characters");
             require_auth(creator);
 
             auto iter = _markets.find(creator);
