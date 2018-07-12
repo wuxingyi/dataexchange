@@ -4,6 +4,8 @@
 
 using namespace eosio;
 using namespace std;
+using eosio::indexed_by;
+using eosio::const_mem_fun;
 
 class dataexchange : public contract {
     using contract::contract;
@@ -14,43 +16,51 @@ class dataexchange : public contract {
             _markets(_self, _self){}
 
         // @abi action
-        void removemarket( name creator){
-            require_auth(creator);
+        void removemarket(uint64_t id){
+            require_auth(_self);
 
-            auto iter = _markets.find(creator);
-            if(iter != _markets.end()) {
-                _markets.erase(iter);
-            }else {
-                eosio_assert(false, "you have no market created");
-            }
+            auto iter = _markets.find(id);
+            eosio_assert(iter != _markets.end(), "marketname not have been created yet");
+
+            _markets.erase(iter);
         }
 
 
         // @abi action
-        void createmarket( name creator, string marketname){
-            if (marketname.length() > 30) eosio_assert(false, "marketname should be less than 30 characters");
-            require_auth(creator);
+        void createmarket(uint64_t marketname){
+            //only the owner can create a market
+            require_auth(_self);
+            //eosio_assert(marketname.length() < 30, "marketname should be less than 30 characters");
+            eosio_assert(has_market(marketname) == false, "marketname already exists");
 
-            auto iter = _markets.find(creator);
-            if(iter == _markets.end()) _markets.emplace( creator, [&]( auto& row) {
-                row.creator = creator;
+            auto newid  = _markets.available_primary_key();
+            _markets.emplace( _self, [&]( auto& row) {
+                row.marketid = newid;
                 row.marketname = marketname;
-            });
-            else _markets.modify( iter, 0, [&]( auto& row) {
-               row.marketname = marketname;
             });
         }
 
     private:
-        // @abi table
+        // @abi table datamarkets i64
         struct datamarkets {
-            name creator;
-            string marketname;
+            uint64_t marketid; 
+            uint64_t marketname;
 
-            name primary_key() const { return creator; }
-            EOSLIB_SERIALIZE( datamarkets, (creator)(marketname) )
+            uint64_t by_marketname() const { return marketname; }
+            uint64_t primary_key() const { return marketid; }
+            EOSLIB_SERIALIZE( datamarkets, (marketid)(marketname))
         };
-        multi_index<N(datamarkets), datamarkets> _markets;
+
+
+        bool has_market( uint64_t market)const {
+           auto idx = _markets.template get_index<N(marketname)>();
+           auto itr = idx.find(market);
+           return itr != idx.end();
+        }
+
+        multi_index <N(datamarkets), datamarkets, 
+                    indexed_by< N(marketname), const_mem_fun<datamarkets, uint64_t, &datamarkets::by_marketname> >
+        > _markets;
 };
 
 EOSIO_ABI( dataexchange, (createmarket)(removemarket))
