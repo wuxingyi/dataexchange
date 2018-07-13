@@ -13,3 +13,8 @@ python testCreate100Markets.py
 ```
 cleos get table dddd dddd datamarkets -l -1
 ```
+## remove market
+removing market need both owner's permission and the marketid
+```
+cleos push action dddd removemarket '["bdibxtljzc",104]' -p bdibxtljzc
+```
