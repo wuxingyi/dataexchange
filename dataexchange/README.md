@@ -2,14 +2,14 @@
 ## build and deploy
 build the cpp code and deploy it to blockchain:  
 ```
-sh build.sh data dataexchange
+sh build.sh dddd dataexchange
 ```
 ## create markets by script
 ```
-python testCreate1000Markets.py
+python testCreate100Markets.py
 ```
 
 ## verify the results
 ```
-cleos get table data data datamarkets -l -1
+cleos get table dddd dddd datamarkets -l -1
 ```
