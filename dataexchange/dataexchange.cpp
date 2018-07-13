@@ -54,8 +54,8 @@ class dataexchange : public contract {
         static const uint64_t sellouts = 4;        
         static const uint64_t typeend = 5;
 
-        // @abi table datamarkets i64
-        struct datamarkets {
+        //@abi table datamarkets i64
+        struct datamarket {
             uint64_t marketid; 
             uint64_t mtype;
             string mdesp;
@@ -64,7 +64,7 @@ class dataexchange : public contract {
             uint64_t primary_key() const { return marketid; }
             uint64_t by_mtype() const { return mtype; }
             uint64_t by_mowner() const { return mowner; }
-            EOSLIB_SERIALIZE( datamarkets, (marketid)(mtype)(mdesp)(mowner))
+            EOSLIB_SERIALIZE( datamarket, (marketid)(mtype)(mdesp)(mowner))
         };
 
 
@@ -74,9 +74,9 @@ class dataexchange : public contract {
            return itr != idx.end();
         }
 
-        multi_index <N(datamarkets), datamarkets, 
-                    indexed_by< N(mtype), const_mem_fun<datamarkets, uint64_t, &datamarkets::by_mtype> >,
-                    indexed_by< N(mowner), const_mem_fun<datamarkets, uint64_t, &datamarkets::by_mowner> >
+        multi_index <N(datamarkets), datamarket, 
+                    indexed_by< N(mtype), const_mem_fun<datamarket, uint64_t, &datamarket::by_mtype> >,
+                    indexed_by< N(mowner), const_mem_fun<datamarket, uint64_t, &datamarket::by_mowner> >
         > _markets;
 };
 
