@@ -13,6 +13,7 @@ class dataexchange : public contract {
     public:
         dataexchange( account_name self ) :
             contract(self),
+            _availableid(_self, _self),
             _markets(_self, _self),
             _askingorders(_self, _self){}
 
@@ -38,9 +39,23 @@ class dataexchange : public contract {
             eosio_assert(hasmarket_byaccountname(owner) == false, "an account can only create only one market now");
             eosio_assert((type > typestart && type < typeend), "out of market type");
 
-            auto newid  = _markets.available_primary_key();
+            auto iter = _availableid.begin();
+            uint64_t id = 0;
+            if (iter == _availableid.end()) {
+                _availableid.emplace( _self, [&]( auto& row) {
+                    row.availmarketid = id;
+                    row.availorderid = 0;
+                    row.padding = 0;
+                });
+            } else {
+                id = iter->availmarketid + 1;
+                _availableid.modify( iter, 0, [&]( auto& row) {
+                    row.availmarketid = id;
+                });
+            }
+
             _markets.emplace( _self, [&]( auto& row) {
-                row.marketid = newid;
+                row.marketid = id;
                 row.mowner = owner;
                 row.mtype = type;
                 row.mdesp = desp;
@@ -49,15 +64,22 @@ class dataexchange : public contract {
 
         // @abi action
         //(fixme) marketowner should be removed
-        void createorder(account_name seller, account_name marketowner, uint64_t marketid, uint64_t price, string dataforsell) {
+        void createorder(account_name seller, uint64_t marketid, uint64_t price, string dataforsell) {
             require_auth(seller);
 
-            eosio_assert(hasmareket_checkouidandowner(marketid, marketowner) == true, "no such market");
+            eosio_assert(hasmareket_byid(marketid) == true, "no such market");
 
-            auto newid  = _askingorders.available_primary_key();
+            auto iter = _availableid.begin();
+            eosio_assert(iter != _availableid.end(), "availableid should have inited");
+            uint64_t id = 0;
+            id = iter->availorderid + 1;
+            _availableid.modify( iter, 0, [&]( auto& row) {
+                row.availorderid = id;
+            });
+
             // we can only put it to the contract owner  scope
             _askingorders.emplace( _self, [&]( auto& order) {
-                order.orderid = newid;
+                order.orderid = id;
                 order.seller = seller;
                 order.marketid = marketid;
                 order.price = price;
@@ -82,6 +104,18 @@ class dataexchange : public contract {
         static const uint64_t sellouts = 4;        
         static const uint64_t typeend = 5;
 
+
+        //@abi table availableid i64
+        struct availableid {
+            uint64_t padding; //(fixme) this is just a simple workaround because modify primary key is not allowed.
+            uint64_t availmarketid; 
+            uint64_t availorderid; 
+            uint64_t primary_key() const { return padding; }
+            EOSLIB_SERIALIZE( availableid, (padding)(availmarketid)(availorderid))
+        };
+
+        multi_index <N(availableid), availableid> _availableid;
+
         //@abi table datamarkets i64
         struct datamarket {
             uint64_t marketid; 
@@ -95,10 +129,9 @@ class dataexchange : public contract {
             EOSLIB_SERIALIZE( datamarket, (marketid)(mtype)(mdesp)(mowner))
         };
 
-        // because marketid maybe be reclaimed after calling removemarket
-        bool hasmareket_checkouidandowner(uint64_t id, account_name owner)const {
+        bool hasmareket_byid(uint64_t id)const {
            auto iter = _markets.find(id);
-           if (iter == _markets.end() || iter->mowner != owner) return false;
+           if (iter == _markets.end()) return false;
            return true;
         }
 
