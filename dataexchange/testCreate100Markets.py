@@ -17,14 +17,14 @@ def make_new_words(count):
 def createAccounts():
     # in my system keosd is runing at 8889 port
     for i in new_words:
-        r = os.system('cleos --wallet-url=http://127.0.0.1:8889 create account eosio %s EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV' % i)
+        r = os.system('cleos create account eosio %s EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV' % i)
 
 def Create100Markets():
     for i in new_words:
         s={'owner': 'asdf', 'type': 2, 'desp':'taobao.com'}
         s['owner'] = i
         s2 = json.dumps(s)
-        ss = "cleos --wallet-url=http://127.0.0.1:8889 push action dddd createmarket " +  "' " + s2 + " '" + " -p dddd" 
+        ss = "cleos push action dddd createmarket " +  "' " + s2 + " '" + " -p dddd" 
         print ss
         os.system(ss)
 
