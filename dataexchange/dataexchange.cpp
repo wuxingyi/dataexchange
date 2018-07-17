@@ -63,7 +63,6 @@ class dataexchange : public contract {
         }
 
         // @abi action
-        //(fixme) marketowner should be removed
         void createorder(account_name seller, uint64_t marketid, uint64_t price, string dataforsell) {
             require_auth(seller);
 
