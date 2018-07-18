@@ -29,5 +29,32 @@ cleos push action dddd createorder '["eosio","bdibxtljzc", 0, 2,"jd.com"]' -p eo
 
 ## remove previously created order
 ```
-cleos push action dddd cancelorder '["eosio",0]' -p eosio
+cleos push action dddd cancelorder '["eosio","bdibxtljzc",0]' -p eosio
+```
+## list opening orders in a market
+```
+➜  dataexchange git:(master) ✗ cleos get table dddd asdf askingorders -l -1
+{
+  "rows": [{
+      "orderid": 1,
+      "marketid": 0,
+      "seller": "asdfasdfasdf",
+      "price": 1,
+      "dataforsell": "aasdf"
+    },{
+      "orderid": 2,
+      "marketid": 0,
+      "seller": "asdfasdfasdf",
+      "price": 1,
+      "dataforsell": "aasdf"
+    },{
+      "orderid": 3,
+      "marketid": 0,
+      "seller": "asdfasdfasdf",
+      "price": 1,
+      "dataforsell": "aasdf"
+    }
+  ],
+  "more": false
+}
 ```

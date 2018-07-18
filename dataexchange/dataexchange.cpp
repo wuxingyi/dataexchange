@@ -78,6 +78,7 @@ class dataexchange : public contract {
             });
 
             auto miter = _markets.find(marketid);
+            eosio_assert(miter->mowner != seller, "please don't sell on your own market");
             ordertable orders(_self, miter->mowner); 
 
             // we can only put it to the contract owner scope
