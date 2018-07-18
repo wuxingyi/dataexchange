@@ -18,13 +18,13 @@ class dataexchange : public contract {
             _askingorders(_self, _self){}
 
         // @abi action
-        void removemarket(account_name owner, uint64_t id){
+        void removemarket(account_name owner, uint64_t marketid){
             //only the market owner can create a market
             require_auth(owner);
 
-            auto iter = _markets.find(id);
-            eosio_assert(iter != _markets.end(), "marketname not have been created yet");
-            eosio_assert(iter->mowner == owner , "market does not belong to you");
+            auto iter = _markets.find(marketid);
+            eosio_assert(iter != _markets.end(), "market not have been created yet");
+            eosio_assert(iter->mowner == owner , "have no permission to this market");
             
             _markets.erase(iter);
         }
@@ -35,7 +35,7 @@ class dataexchange : public contract {
             //only the contract owner can create a market
             require_auth(_self);
 
-            eosio_assert(desp.length() < 30, "marketname should be less than 30 characters");
+            eosio_assert(desp.length() < 30, "market description should be less than 30 characters");
             eosio_assert(hasmarket_byaccountname(owner) == false, "an account can only create only one market now");
             eosio_assert((type > typestart && type < typeend), "out of market type");
 
@@ -69,7 +69,7 @@ class dataexchange : public contract {
             eosio_assert(hasmareket_byid(marketid) == true, "no such market");
 
             auto iter = _availableid.begin();
-            eosio_assert(iter != _availableid.end(), "availableid should have inited");
+            eosio_assert(iter != _availableid.end(), "availableid should have been initialized");
             uint64_t id = 0;
             id = iter->availorderid + 1;
             _availableid.modify( iter, 0, [&]( auto& row) {
