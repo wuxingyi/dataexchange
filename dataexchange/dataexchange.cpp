@@ -25,6 +25,7 @@ class dataexchange : public contract {
             auto iter = _markets.find(marketid);
             eosio_assert(iter != _markets.end(), "market not have been created yet");
             eosio_assert(iter->mowner == owner , "have no permission to this market");
+            eosio_assert(hasorder_bymarketid(marketid) == false, "market can't be removed because it still has opening orders");
             
             _markets.erase(iter);
         }
@@ -157,12 +158,19 @@ class dataexchange : public contract {
 
             uint64_t primary_key() const { return orderid; }
             uint64_t by_seller() const { return seller; }
+            uint64_t by_marketid() const { return marketid; }
             EOSLIB_SERIALIZE( askingorder, (orderid)(marketid)(seller)(price)(dataforsell))
         };
 
+        bool hasorder_bymarketid( account_name id)const {
+           auto idx = _askingorders.template get_index<N(marketid)>();
+           auto itr = idx.find(id);
+           return itr != idx.end();
+        }
 
         multi_index <N(askingorders), askingorder ,
-                     indexed_by< N(seller), const_mem_fun<askingorder, uint64_t, &askingorder::by_seller> >
+                     indexed_by< N(seller), const_mem_fun<askingorder, uint64_t, &askingorder::by_seller> >,
+                     indexed_by< N(marketid), const_mem_fun<askingorder, uint64_t, &askingorder::by_marketid> >
         > _askingorders;
 };
 
