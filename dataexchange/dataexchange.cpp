@@ -14,8 +14,7 @@ class dataexchange : public contract {
         dataexchange( account_name self ) :
             contract(self),
             _availableid(_self, _self),
-            _markets(_self, _self),
-            _askingorders(_self, _self){}
+            _markets(_self, _self){}
 
         // @abi action
         void removemarket(account_name owner, uint64_t marketid){
@@ -71,14 +70,18 @@ class dataexchange : public contract {
 
             auto iter = _availableid.begin();
             eosio_assert(iter != _availableid.end(), "availableid should have been initialized");
+
             uint64_t id = 0;
             id = iter->availorderid + 1;
             _availableid.modify( iter, 0, [&]( auto& row) {
                 row.availorderid = id;
             });
 
-            // we can only put it to the contract owner  scope
-            _askingorders.emplace( _self, [&]( auto& order) {
+            auto miter = _markets.find(marketid);
+            ordertable orders(_self, miter->mowner); 
+
+            // we can only put it to the contract owner scope
+            orders.emplace(seller, [&]( auto& order) {
                 order.orderid = id;
                 order.seller = seller;
                 order.marketid = marketid;
@@ -87,13 +90,16 @@ class dataexchange : public contract {
             });
         }
 
-        void cancelorder(account_name seller, uint64_t orderid) {
+        // @abi action
+        void cancelorder(account_name seller, account_name owner, uint64_t orderid) {
             require_auth(seller);
-            auto iter = _askingorders.find(orderid);
 
-            eosio_assert(iter != _askingorders.end() , "no such order");
+            ordertable orders(_self, owner);
+            auto iter = orders.find(orderid);
+
+            eosio_assert(iter != orders.end() , "no such order");
             eosio_assert(iter->seller == seller, "order doesn't belong to you");
-            _askingorders.erase(iter);
+            orders.erase(iter);
         }
 
     private:
@@ -163,15 +169,16 @@ class dataexchange : public contract {
         };
 
         bool hasorder_bymarketid( account_name id)const {
-           auto idx = _askingorders.template get_index<N(marketid)>();
+           ordertable orders(_self, id); 
+           auto idx = orders.template get_index<N(marketid)>();
            auto itr = idx.find(id);
            return itr != idx.end();
         }
 
-        multi_index <N(askingorders), askingorder ,
+        typedef multi_index <N(askingorders), askingorder ,
                      indexed_by< N(seller), const_mem_fun<askingorder, uint64_t, &askingorder::by_seller> >,
                      indexed_by< N(marketid), const_mem_fun<askingorder, uint64_t, &askingorder::by_marketid> >
-        > _askingorders;
+        > ordertable;
 };
 
 EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder))
