@@ -15,7 +15,6 @@ def make_new_words(count):
 
 
 def createAccounts():
-    # in my system keosd is runing at 8889 port
     for i in new_words:
         r = os.system('cleos create account eosio %s EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV' % i)
 
@@ -25,7 +24,6 @@ def Create100Markets():
         s['owner'] = i
         s2 = json.dumps(s)
         ss = "cleos push action dddd createmarket " +  "' " + s2 + " '" + " -p dddd" 
-        print ss
         os.system(ss)
 
 
