@@ -14,7 +14,8 @@ class dataexchange : public contract {
         dataexchange( account_name self ) :
             contract(self),
             _availableid(_self, _self),
-            _markets(_self, _self){}
+            _markets(_self, _self),
+            _accounts(_self, _self){}
 
         // @abi action
         void removemarket(account_name owner, uint64_t marketid){
@@ -63,7 +64,7 @@ class dataexchange : public contract {
         }
 
         // @abi action
-        void createorder(account_name seller, uint64_t marketid, uint64_t price, string dataforsell) {
+        void createorder(account_name seller, uint64_t marketid, const asset& price, string dataforsell) {
             require_auth(seller);
 
             eosio_assert(hasmareket_byid(marketid) == true, "no such market");
@@ -101,6 +102,62 @@ class dataexchange : public contract {
             eosio_assert(iter != orders.end() , "no such order");
             eosio_assert(iter->seller == seller, "order doesn't belong to you");
             orders.erase(iter);
+        }
+
+        // @abi action
+        //owner is the market owner, not the seller, seller is stored in struct order.
+        void fillorder(account_name buyer, account_name owner, uint64_t orderid) {
+            require_auth(buyer);
+
+            ordertable orders(_self, owner);
+            auto iter = orders.find(orderid);
+
+            eosio_assert(iter != orders.end() , "no such order");
+
+
+            auto buyeritr = _accounts.find(buyer);
+            eosio_assert(buyeritr != _accounts.end() , "buyer should have deposit token");
+            _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
+               acnt.asset_balance -= iter->price;
+            });
+
+
+            // buyer costs tokens
+            auto selleriter = _accounts.find(iter->seller);
+            if( selleriter == _accounts.end() ) {
+                _accounts.emplace(_self, [&](auto& acnt){
+                  acnt.owner = iter->seller;
+               });
+            }
+
+            // seller got tokens
+            _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
+               acnt.asset_balance += iter->price;
+            });
+        }
+
+        //@abi action
+        void deposit( const account_name from, const asset& quantity ) {
+           
+           eosio_assert( quantity.is_valid(), "invalid quantity" );
+           eosio_assert( quantity.amount > 0, "must deposit positive quantity" );
+
+           auto itr = _accounts.find(from);
+           if( itr == _accounts.end() ) {
+              itr = _accounts.emplace(_self, [&](auto& acnt){
+                 acnt.owner = from;
+              });
+           }
+
+           action(
+              permission_level{ from, N(active) },
+              N(xingyitoken), N(transfer),
+              std::make_tuple(from, _self, quantity, std::string(""))
+           ).send();
+
+           _accounts.modify( itr, 0, [&]( auto& acnt ) {
+               acnt.asset_balance += quantity;
+           });
         }
 
     private:
@@ -160,7 +217,7 @@ class dataexchange : public contract {
 
             //account of the seller
             account_name seller;
-            uint64_t price;     //(fixme) use asset type
+            asset price;     //(fixme) use asset type
             string dataforsell; //(fixme) need change
 
             uint64_t primary_key() const { return orderid; }
@@ -180,6 +237,19 @@ class dataexchange : public contract {
                      indexed_by< N(seller), const_mem_fun<askingorder, uint64_t, &askingorder::by_seller> >,
                      indexed_by< N(marketid), const_mem_fun<askingorder, uint64_t, &askingorder::by_marketid> >
         > ordertable;
+
+
+        //@abi table accounts i64
+        struct account {
+           account_name owner;
+           asset        asset_balance;
+
+           uint64_t primary_key()const { return owner; }
+
+           EOSLIB_SERIALIZE( account, (owner)(asset_balance))
+        };
+
+        eosio::multi_index< N(account), account> _accounts;
 };
 
-EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder))
+EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(fillorder)(deposit))
