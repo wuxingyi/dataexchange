@@ -33,9 +33,9 @@ cleos get currency balance xingyitoken dex
 cleos push action dex createmarket ' {"owner": "datasource1", "desp": "datasource", "type": 2} ' -p dex
 
 # 4.seller1 and seller2 both create asking order
-cleos push action dex createorder ' {"seller": "seller1", "marketid": 0, "price": "100.0000 SYS", "dataforsell": "aasdf"} ' -p seller1
-cleos push action dex createorder ' {"seller": "seller2", "marketid": 0, "price": "200.0000 SYS", "dataforsell": "aasdf"} ' -p seller2
-cleos push action dex createorder ' {"seller": "seller3", "marketid": 0, "price": "300.0000 SYS", "dataforsell": "aasdf"} ' -p seller3
+cleos push action dex createorder ' {"seller": "seller1", "marketid": 0, "price": "1.0000 SYS", "dataforsell": "aasdf"} ' -p seller1
+cleos push action dex createorder ' {"seller": "seller2", "marketid": 0, "price": "2.0000 SYS", "dataforsell": "aasdf"} ' -p seller2
+cleos push action dex createorder ' {"seller": "seller3", "marketid": 0, "price": "3.0000 SYS", "dataforsell": "aasdf"} ' -p seller3
 cleos get table dex datasource1 askingorders
 
 

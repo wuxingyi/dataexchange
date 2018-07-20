@@ -115,25 +115,27 @@ class dataexchange : public contract {
             eosio_assert(iter != orders.end() , "no such order");
 
 
+            // buyer costs tokens
             auto buyeritr = _accounts.find(buyer);
             eosio_assert(buyeritr != _accounts.end() , "buyer should have deposit token");
             _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
                acnt.asset_balance -= iter->price;
             });
 
-
-            // buyer costs tokens
             auto selleriter = _accounts.find(iter->seller);
             if( selleriter == _accounts.end() ) {
-                _accounts.emplace(_self, [&](auto& acnt){
+                _accounts.emplace(buyer, [&](auto& acnt){
                   acnt.owner = iter->seller;
                });
             }
 
+            selleriter = _accounts.find(iter->seller);
             // seller got tokens
             _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
                acnt.asset_balance += iter->price;
             });
+
+            orders.erase(iter);
         }
 
         //@abi action
@@ -149,15 +151,42 @@ class dataexchange : public contract {
               });
            }
 
+           _accounts.modify( itr, 0, [&]( auto& acnt ) {
+               print("wuxingyi's here");
+               acnt.asset_balance += quantity;
+           });
+
            action(
               permission_level{ from, N(active) },
               N(xingyitoken), N(transfer),
               std::make_tuple(from, _self, quantity, std::string(""))
            ).send();
+        }
+
+        //@abi action
+        void withdraw( const account_name owner, const asset& quantity ) {
+           require_auth( owner );
+
+           eosio_assert( quantity.is_valid(), "invalid quantity" );
+           eosio_assert( quantity.amount > 0, "must withdraw positive quantity" );
+
+           auto itr = _accounts.find( owner );
+           eosio_assert(itr != _accounts.end(), "unknown account");
 
            _accounts.modify( itr, 0, [&]( auto& acnt ) {
-               acnt.asset_balance += quantity;
+              eosio_assert( acnt.asset_balance >= quantity, "insufficient balance" );
+              acnt.asset_balance -= quantity;
            });
+
+           action(
+              permission_level{ _self, N(active) },
+              N(xingyitoken), N(transfer),
+              std::make_tuple(_self, owner, quantity, std::string(""))
+           ).send();
+
+           if( itr->asset_balance.amount == 0) {
+              _accounts.erase(itr);
+           }
         }
 
     private:
@@ -217,7 +246,7 @@ class dataexchange : public contract {
 
             //account of the seller
             account_name seller;
-            asset price;     //(fixme) use asset type
+            asset price;
             string dataforsell; //(fixme) need change
 
             uint64_t primary_key() const { return orderid; }
@@ -249,7 +278,7 @@ class dataexchange : public contract {
            EOSLIB_SERIALIZE( account, (owner)(asset_balance))
         };
 
-        eosio::multi_index< N(account), account> _accounts;
+        multi_index< N(accounts), account> _accounts;
 };
 
-EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(fillorder)(deposit))
+EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(fillorder)(deposit)(withdraw))
