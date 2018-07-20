@@ -11,6 +11,7 @@ cleos create account eosio buyer1 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET
 cleos create account eosio buyer2 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 cleos set account permission buyer1 active '{"threshold": 1,"keys": [{"key": "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","weight": 1}],"accounts": [{"permission":{"actor":"dex","permission":"eosio.code"},"weight":1}]}' owner -p buyer1
 cleos set account permission buyer2 active '{"threshold": 1,"keys": [{"key": "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","weight": 1}],"accounts": [{"permission":{"actor":"dex","permission":"eosio.code"},"weight":1}]}' owner -p buyer2
+cleos set account permission dex active '{"threshold": 1,"keys": [{"key": "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","weight": 1}],"accounts": [{"permission":{"actor":"dex","permission":"eosio.code"},"weight":1}]}' owner -p dex
 
 
 # 1.xingyitoken is used for token transfer
@@ -44,4 +45,13 @@ cleos push action dex fillorder ' {"buyer": "buyer1", "owner": "datasource1", "o
 cleos push action dex fillorder ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 2} ' -p buyer1
 cleos push action dex fillorder ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 3} ' -p buyer1
 
+
 cleos get table dex datasource1 askingorders
+
+# 6.sellers withdraw their tokens
+cleos push action dex withdraw '[ "seller1", "1.0000 SYS" ]' -p seller1
+cleos push action dex withdraw '[ "seller2", "2.0000 SYS" ]' -p seller2
+cleos push action dex withdraw '[ "seller3", "3.0000 SYS" ]' -p seller3
+cleos get currency balance xingyitoken seller1
+cleos get currency balance xingyitoken seller2
+cleos get currency balance xingyitoken seller3
