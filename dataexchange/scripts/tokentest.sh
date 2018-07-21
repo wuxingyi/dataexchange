@@ -24,8 +24,8 @@ cleos get currency balance xingyitoken buyer1
 cleos get currency balance xingyitoken buyer2
 
 # 2.two buyers all deposit their COIN to the contract
-cleos push action dex deposit '[ "buyer1", "10000.0000 SYS" ]' -p buyer1
-cleos push action dex deposit '[ "buyer2", "10000.0000 SYS" ]' -p buyer2
+cleos push action dex deposit '[ "buyer1", "100.0000 SYS" ]' -p buyer1
+cleos push action dex deposit '[ "buyer2", "100.0000 SYS" ]' -p buyer2
 cleos get currency balance xingyitoken buyer1
 cleos get currency balance xingyitoken buyer2
 cleos get currency balance xingyitoken dex
@@ -43,10 +43,10 @@ cleos get table dex datasource1 askingorders
 # 5.fill the asking orders
 cleos push action dex fillorder ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
 cleos push action dex fillorder ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 2} ' -p buyer1
-cleos push action dex fillorder ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 3} ' -p buyer1
-
-
+cleos push action dex fillorder ' {"buyer": "buyer2", "owner": "datasource1", "orderid": 3} ' -p buyer2
 cleos get table dex datasource1 askingorders
+cleos get table dex dex accounts
+
 
 # 6.sellers withdraw their tokens
 cleos push action dex withdraw '[ "seller1", "1.0000 SYS" ]' -p seller1
@@ -55,3 +55,11 @@ cleos push action dex withdraw '[ "seller3", "3.0000 SYS" ]' -p seller3
 cleos get currency balance xingyitoken seller1
 cleos get currency balance xingyitoken seller2
 cleos get currency balance xingyitoken seller3
+cleos get table dex dex accounts
+
+# 7.buyers withdraw their tokens
+#each buyer buy data for 3 SYS, so left only 97 each
+cleos push action dex withdraw '[ "buyer1", "97.0000 SYS" ]' -p buyer1
+cleos push action dex withdraw '[ "buyer2", "97.0000 SYS" ]' -p buyer2
+# now there are no account stored, all memory freed
+cleos get table dex dex accounts
