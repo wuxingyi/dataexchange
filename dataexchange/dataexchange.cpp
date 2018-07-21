@@ -156,6 +156,8 @@ class dataexchange : public contract {
                acnt.asset_balance += quantity;
            });
 
+           //make sure contract xingyitoken have been deployed to blockchain to make it runnable
+           //xingyitoken is our own token, its symblo is SYS
            action(
               permission_level{ from, N(active) },
               N(xingyitoken), N(transfer),
@@ -178,6 +180,8 @@ class dataexchange : public contract {
               acnt.asset_balance -= quantity;
            });
 
+           //make sure contract xingyitoken have been deployed to blockchain to make it runnable
+           //xingyitoken is our own token, its symblo is SYS
            action(
               permission_level{ _self, N(active) },
               N(xingyitoken), N(transfer),
