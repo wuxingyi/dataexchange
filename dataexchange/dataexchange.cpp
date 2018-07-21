@@ -130,7 +130,8 @@ class dataexchange : public contract {
             }
 
             selleriter = _accounts.find(iter->seller);
-            // seller got tokens
+
+            // add token to seller's account
             _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
                acnt.asset_balance += iter->price;
             });
@@ -152,14 +153,13 @@ class dataexchange : public contract {
            }
 
            _accounts.modify( itr, 0, [&]( auto& acnt ) {
-               print("wuxingyi's here");
                acnt.asset_balance += quantity;
            });
 
            action(
               permission_level{ from, N(active) },
               N(xingyitoken), N(transfer),
-              std::make_tuple(from, _self, quantity, std::string(""))
+              std::make_tuple(from, _self, quantity, std::string("deposit token"))
            ).send();
         }
 
@@ -171,7 +171,7 @@ class dataexchange : public contract {
            eosio_assert( quantity.amount > 0, "must withdraw positive quantity" );
 
            auto itr = _accounts.find( owner );
-           eosio_assert(itr != _accounts.end(), "unknown account");
+           eosio_assert(itr != _accounts.end(), "account has no fund, can't withdraw");
 
            _accounts.modify( itr, 0, [&]( auto& acnt ) {
               eosio_assert( acnt.asset_balance >= quantity, "insufficient balance" );
@@ -181,9 +181,10 @@ class dataexchange : public contract {
            action(
               permission_level{ _self, N(active) },
               N(xingyitoken), N(transfer),
-              std::make_tuple(_self, owner, quantity, std::string(""))
+              std::make_tuple(_self, owner, quantity, std::string("withdraw token"))
            ).send();
 
+           // erase account when no more fund to free memory 
            if( itr->asset_balance.amount == 0) {
               _accounts.erase(itr);
            }
@@ -269,6 +270,9 @@ class dataexchange : public contract {
 
 
         //@abi table accounts i64
+        //this table is used to record the tokens per eos account
+        //those who have any token deposited to contract will got a entry in this table
+        //and got erased after all fund withdrawed to reduce memory usage.
         struct account {
            account_name owner;
            asset        asset_balance;
