@@ -36,21 +36,26 @@ cleos get currency balance xingyitoken dex
 cleos push action dex createmarket ' {"owner": "datasource1", "desp": "datasource", "type": 2} ' -p dex
 
 # 4.seller1 and seller2 both create asking order
-cleos push action dex createorder ' {"seller": "seller1", "marketid": 0, "price": "1.0000 SYS", "dataforsell": "aasdf"} ' -p seller1
-cleos push action dex createorder ' {"seller": "seller2", "marketid": 0, "price": "2.0000 SYS", "dataforsell": "aasdf"} ' -p seller2
-cleos push action dex createorder ' {"seller": "seller3", "marketid": 0, "price": "3.0000 SYS", "dataforsell": "aasdf"} ' -p seller3
+cleos push action dex createorder ' {"seller": "seller1", "marketid": 0, "price": "1.0000 SYS"} ' -p seller1
+cleos push action dex createorder ' {"seller": "seller2", "marketid": 0, "price": "2.0000 SYS"} ' -p seller2
+cleos push action dex createorder ' {"seller": "seller3", "marketid": 0, "price": "3.0000 SYS"} ' -p seller3
 cleos get table dex datasource1 askingorders
 
 
 # 5.fill the asking orders
-cleos push action dex fillorder ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
-cleos push action dex fillorder ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 2} ' -p buyer1
-cleos push action dex fillorder ' {"buyer": "buyer2", "owner": "datasource1", "orderid": 3} ' -p buyer2
+cleos push action dex tryfillorder ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
+cleos push action dex tryfillorder ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 2} ' -p buyer1
+cleos push action dex tryfillorder ' {"buyer": "buyer2", "owner": "datasource1", "orderid": 3} ' -p buyer2
 cleos get table dex datasource1 askingorders
 cleos get table dex dex accounts
 
+# 6.seller upload datahash(calling finishorder)
+cleos push action dex finishorder '[ "seller1", "datasource1", 1, "asdf" ]' -p seller1
+cleos push action dex finishorder '[ "seller2", "datasource1", 2, "asdfasf" ]' -p seller2
+cleos push action dex finishorder '[ "seller3", "datasource1", 3, "asdfasf" ]' -p seller3
+cleos get table dex dex accounts
 
-# 6.sellers withdraw their tokens
+# 7.sellers withdraw their tokens
 cleos push action dex withdraw '[ "seller1", "1.0000 SYS" ]' -p seller1
 cleos push action dex withdraw '[ "seller2", "2.0000 SYS" ]' -p seller2
 cleos push action dex withdraw '[ "seller3", "3.0000 SYS" ]' -p seller3
@@ -59,14 +64,20 @@ cleos get currency balance xingyitoken seller2
 cleos get currency balance xingyitoken seller3
 cleos get table dex dex accounts
 
-# 7.buyers withdraw their tokens
+# 8.sellers erase order to reduce memory usage
+cleos push action dex eraseorder '[ "seller1", "datasource1", 1]' -p seller1
+cleos push action dex eraseorder '[ "seller2", "datasource1", 2]' -p seller2
+cleos push action dex eraseorder '[ "seller3", "datasource1", 3]' -p seller3
+cleos get table dex datasource1 askingorders
+
+# 9.buyers withdraw their tokens
 #each buyer buy data for 3 SYS, so left only 97 each
 cleos push action dex withdraw '[ "buyer1", "97.0000 SYS" ]' -p buyer1
 cleos push action dex withdraw '[ "buyer2", "97.0000 SYS" ]' -p buyer2
 # now there are no account stored, all memory freed
 cleos get table dex dex accounts
 
-# 8.sellers reg and dereg keys
+# 10.sellers reg and dereg keys
 cleos push action dex regpkey '[ "seller1", "asdfasdfasdfasdfasdfa" ]' -p seller1
 cleos push action dex regpkey '[ "seller2", "eoseoseoseoseoseoseos" ]' -p seller2
 cleos push action dex deposit '[ "seller1", "1.0000 SYS" ]' -p seller1
