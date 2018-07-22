@@ -1,4 +1,3 @@
 *.wasm
-*.abi
 *.wast
 .vscode
