@@ -189,10 +189,43 @@ class dataexchange : public contract {
            ).send();
 
            // erase account when no more fund to free memory 
-           if( itr->asset_balance.amount == 0) {
+           if( itr->asset_balance.amount == 0 && itr->pkey.length() == 0) {
               _accounts.erase(itr);
            }
         }
+
+        //@abi action
+        void regpkey( const account_name owner, const string pkey) {
+           require_auth( owner );
+
+           auto itr = _accounts.find( owner );
+           if( itr == _accounts.end() ) {
+              itr = _accounts.emplace(_self, [&](auto& acnt){
+                 acnt.owner = owner;
+              });
+           }
+
+           _accounts.modify( itr, 0, [&]( auto& acnt ) {
+              acnt.pkey = pkey;
+           });
+        }
+
+        //@abi action
+        void deregpkey( const account_name owner) {
+           require_auth( owner );
+
+           auto itr = _accounts.find( owner );
+           eosio_assert(itr != _accounts.end(), "account not registered yet");
+
+           if (itr->asset_balance.amount > 0) {
+               _accounts.modify( itr, 0, [&]( auto& acnt ) {
+                  acnt.pkey = "";
+               });
+           } else {
+                 _accounts.erase(itr);
+           }
+        }
+
 
     private:
         static const uint64_t typestart = 0;
@@ -280,13 +313,15 @@ class dataexchange : public contract {
         struct account {
            account_name owner;
            asset        asset_balance;
+           string       pkey;
 
            uint64_t primary_key()const { return owner; }
 
-           EOSLIB_SERIALIZE( account, (owner)(asset_balance))
+           EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey))
         };
 
         multi_index< N(accounts), account> _accounts;
 };
 
-EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(fillorder)(deposit)(withdraw))
+EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(fillorder)(deposit)(withdraw)
+          (regpkey)(deregpkey))

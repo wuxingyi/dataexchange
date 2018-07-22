@@ -11,6 +11,8 @@ cleos create account eosio buyer1 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET
 cleos create account eosio buyer2 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 cleos set account permission buyer1 active '{"threshold": 1,"keys": [{"key": "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","weight": 1}],"accounts": [{"permission":{"actor":"dex","permission":"eosio.code"},"weight":1}]}' owner -p buyer1
 cleos set account permission buyer2 active '{"threshold": 1,"keys": [{"key": "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","weight": 1}],"accounts": [{"permission":{"actor":"dex","permission":"eosio.code"},"weight":1}]}' owner -p buyer2
+cleos set account permission seller1 active '{"threshold": 1,"keys": [{"key": "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","weight": 1}],"accounts": [{"permission":{"actor":"dex","permission":"eosio.code"},"weight":1}]}' owner -p seller1
+cleos set account permission seller2 active '{"threshold": 1,"keys": [{"key": "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","weight": 1}],"accounts": [{"permission":{"actor":"dex","permission":"eosio.code"},"weight":1}]}' owner -p seller2
 cleos set account permission dex active '{"threshold": 1,"keys": [{"key": "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","weight": 1}],"accounts": [{"permission":{"actor":"dex","permission":"eosio.code"},"weight":1}]}' owner -p dex
 
 
@@ -62,4 +64,16 @@ cleos get table dex dex accounts
 cleos push action dex withdraw '[ "buyer1", "97.0000 SYS" ]' -p buyer1
 cleos push action dex withdraw '[ "buyer2", "97.0000 SYS" ]' -p buyer2
 # now there are no account stored, all memory freed
+cleos get table dex dex accounts
+
+# 8.sellers reg and dereg keys
+cleos push action dex regpkey '[ "seller1", "asdfasdfasdfasdfasdfa" ]' -p seller1
+cleos push action dex regpkey '[ "seller2", "eoseoseoseoseoseoseos" ]' -p seller2
+cleos push action dex deposit '[ "seller1", "1.0000 SYS" ]' -p seller1
+cleos push action dex deposit '[ "seller2", "1.0000 SYS" ]' -p seller2
+cleos get table dex dex accounts
+cleos push action dex deregpkey '[ "seller1" ]' -p seller1
+cleos push action dex deregpkey '[ "seller2" ]' -p seller2
+cleos push action dex withdraw '[ "seller1", "1.0000 SYS" ]' -p seller1
+cleos push action dex withdraw '[ "seller2", "1.0000 SYS" ]' -p seller2
 cleos get table dex dex accounts
