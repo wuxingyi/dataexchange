@@ -102,6 +102,19 @@ class dataexchange : public contract {
         }
 
         // @abi action
+        void cancelorder(account_name seller, account_name owner, uint64_t orderid) {
+            require_auth(seller);
+
+            ordertable orders(_self, owner);
+            auto iter = orders.find(orderid);
+
+            eosio_assert(iter != orders.end() , "no such order");
+            eosio_assert(iter->seller == seller, "order doesn't belong to you");
+            eosio_assert(iter->orderstate != orderstate_finished, "only unfinished orders can be canceled");
+            orders.erase(iter);
+        }
+
+        // @abi action
         void eraseorder(account_name seller, account_name owner, uint64_t orderid) {
             require_auth(seller);
 
@@ -111,18 +124,6 @@ class dataexchange : public contract {
             eosio_assert(iter != orders.end() , "no such order");
             eosio_assert(iter->seller == seller, "order doesn't belong to you");
             eosio_assert(iter->orderstate == orderstate_finished, "only finished orders can be erased");
-            orders.erase(iter);
-        }
-
-        // @abi action
-        void cancelorder(account_name seller, account_name owner, uint64_t orderid) {
-            require_auth(seller);
-
-            ordertable orders(_self, owner);
-            auto iter = orders.find(orderid);
-
-            eosio_assert(iter != orders.end() , "no such order");
-            eosio_assert(iter->seller == seller, "order doesn't belong to you");
             orders.erase(iter);
         }
 
