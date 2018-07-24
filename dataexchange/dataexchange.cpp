@@ -1,5 +1,7 @@
 #include "dataexchange.hpp"
+#include "base58.hpp"
 
+using namespace std;
 void dataexchange::removemarket(account_name owner, uint64_t marketid){
     //only the market owner can create a market
     require_auth(owner);
@@ -44,7 +46,7 @@ void dataexchange::createmarket(account_name owner, uint64_t type, string desp){
     });
 }
 
-void dataexchange::createorder(account_name seller, uint64_t marketid, const asset& price) {
+void dataexchange::createorder(account_name seller, uint64_t marketid, asset& price) {
     require_auth(seller);
 
     eosio_assert(hasmareket_byid(marketid) == true, "no such market");
@@ -151,7 +153,7 @@ void dataexchange::finishorder(account_name seller, account_name owner, uint64_t
     });
 }
 
-void dataexchange::deposit( const account_name from, const asset& quantity ) {
+void dataexchange::deposit(account_name from, asset& quantity ) {
    
    eosio_assert( quantity.is_valid(), "invalid quantity" );
    eosio_assert( quantity.amount > 0, "must deposit positive quantity" );
@@ -176,7 +178,7 @@ void dataexchange::deposit( const account_name from, const asset& quantity ) {
    ).send();
 }
 
-void dataexchange::withdraw( const account_name owner, const asset& quantity ) {
+void dataexchange::withdraw(account_name owner, asset& quantity ) {
    require_auth( owner );
 
    eosio_assert( quantity.is_valid(), "invalid quantity" );
@@ -204,8 +206,33 @@ void dataexchange::withdraw( const account_name owner, const asset& quantity ) {
    }
 }
 
-void dataexchange::regpkey( const account_name owner, const string pkey) {
+void dataexchange::regpkey(account_name owner, string pkey) {
    require_auth( owner );
+
+   pkey.erase(pkey.begin(), find_if(pkey.begin(), pkey.end(), [](int ch) {
+       return !isspace(ch);
+   }));
+   pkey.erase(find_if(pkey.rbegin(), pkey.rend(), [](int ch) {
+       return !isspace(ch);
+   }).base(), pkey.end());
+
+   eosio_assert(pkey.length() == 53, "Length of public key should be 53");
+   string pubkey_prefix("EOS");
+   auto result = mismatch(pubkey_prefix.begin(), pubkey_prefix.end(), pkey.begin());
+   eosio_assert(result.first == pubkey_prefix.end(), "Public key should be prefix with EOS");
+
+   auto base58substr = pkey.substr(pubkey_prefix.length());
+   vector<unsigned char> vch;
+   //(fixme)decode_base58 can be very time-consuming, must remove it in the future.
+   eosio_assert(decode_base58(base58substr, vch), "Decode public failed");
+   eosio_assert(vch.size() == 37, "Invalid public key: invalid base58 length");
+
+   array<unsigned char,33> pubkey_data;
+   copy_n(vch.begin(), 33, pubkey_data.begin());
+
+   checksum160 check_pubkey;
+   ripemd160(reinterpret_cast<char *>(pubkey_data.data()), 33, &check_pubkey);
+   eosio_assert(memcmp(&check_pubkey.hash, &vch.end()[-4], 4) == 0, "Invalid public key: invalid checksum");
 
    auto itr = _accounts.find( owner );
    if( itr == _accounts.end() ) {
@@ -219,7 +246,7 @@ void dataexchange::regpkey( const account_name owner, const string pkey) {
    });
 }
 
-void dataexchange::deregpkey( const account_name owner) {
+void dataexchange::deregpkey(account_name owner) {
    require_auth( owner );
 
    auto itr = _accounts.find( owner );

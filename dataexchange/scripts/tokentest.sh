@@ -83,8 +83,8 @@ cleos push action dex withdraw '[ "buyer2", "97.0000 SYS" ]' -p buyer2
 cleos get table dex dex accounts
 
 # 10.sellers reg and dereg keys
-cleos push action dex regpkey '[ "seller1", "asdfasdfasdfasdfasdfa" ]' -p seller1
-cleos push action dex regpkey '[ "seller2", "eoseoseoseoseoseoseos" ]' -p seller2
+cleos push action dex regpkey '[ "seller1", "EOS5K8BJWoKQZUu1UDn9MyWBDV4yiHfF6AcWe6P7626GaNW4LEpsa" ]' -p seller1
+cleos push action dex regpkey '[ "seller2", "EOS8PZ6B8ajgDLUKzHKMdk127B5sAfZEhSav6ZbhPs8MdymcVP3bR" ]' -p seller2
 cleos push action dex deposit '[ "seller1", "1.0000 SYS" ]' -p seller1
 cleos push action dex deposit '[ "seller2", "1.0000 SYS" ]' -p seller2
 cleos get table dex dex accounts

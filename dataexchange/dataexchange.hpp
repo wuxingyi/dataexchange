@@ -1,6 +1,8 @@
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/print.hpp>
 #include <eosiolib/asset.hpp>
+#include <eosiolib/crypto.h>
+#include <cstring>
 
 using namespace eosio;
 using namespace std;
@@ -22,7 +24,7 @@ public:
     //@abi action
     void createmarket(account_name owner, uint64_t type, string desp);
     //@abi action
-    void createorder(account_name seller, uint64_t marketid, const asset& price);
+    void createorder(account_name seller, uint64_t marketid, asset& price);
     //@abi action
     void cancelorder(account_name seller, account_name owner, uint64_t orderid);
     //@abi action
@@ -32,13 +34,13 @@ public:
     //@abi action
     void finishorder(account_name seller, account_name owner, uint64_t orderid, string datahash);
     //@abi action
-    void deposit( const account_name from, const asset& quantity );
+    void deposit( account_name from, asset& quantity );
     //@abi action
-    void withdraw( const account_name owner, const asset& quantity );
+    void withdraw( account_name owner, asset& quantity );
     //@abi action
-    void regpkey( const account_name owner, const string pkey) ;
+    void regpkey( account_name owner, string pkey) ;
     //@abi action
-    void deregpkey( const account_name owner);
+    void deregpkey( account_name owner);
 private:
     static const uint64_t typestart = 0;
     static const uint64_t authorities = 1;
