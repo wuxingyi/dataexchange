@@ -95,6 +95,22 @@ void dataexchange::cancelorder(account_name seller, account_name owner, uint64_t
     orders.erase(iter);
 }
 
+void dataexchange::buyercancel(account_name buyer, account_name owner, uint64_t orderid) {
+    require_auth(buyer);
+
+    ordertable orders(_self, owner);
+    auto iter = orders.find(orderid);
+
+    eosio_assert(iter != orders.end() , "no such order");
+    eosio_assert(iter->buyer == buyer, "order doesn't belong to you");
+    eosio_assert(iter->orderstate == orderstate_waitinghash, "only orders in orderstate_waitinghash state can be canceled");
+
+    orders.modify( iter, 0, [&]( auto& order) {
+       order.buyer = 0;
+       order.orderstate = orderstate_start;
+    });
+}
+
 void dataexchange::eraseorder(account_name seller, account_name owner, uint64_t orderid) {
     require_auth(seller);
 
@@ -115,6 +131,7 @@ void dataexchange::tryfillorder(account_name buyer, account_name owner, uint64_t
     auto iter = orders.find(orderid);
 
     eosio_assert(iter != orders.end() , "no such order");
+    eosio_assert(iter->orderstate == orderstate_start, "orders can be filled only when it's state is orderstate_start");
 
     // buyer costs tokens
     auto buyeritr = _accounts.find(buyer);
