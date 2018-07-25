@@ -17,7 +17,8 @@ public:
         contract(self),
         _availableid(_self, _self),
         _markets(_self, _self),
-        _accounts(_self, _self){}
+        _accounts(_self, _self),
+        _deals(_self, _self){}
 
     //@abi action
     void removemarket(account_name owner, uint64_t marketid);
@@ -32,9 +33,9 @@ public:
     //@abi action
     void eraseorder(account_name seller, account_name owner, uint64_t orderid);
     //@abi action
-    void tryfillorder(account_name buyer, account_name owner, uint64_t orderid);
+    void makedeal(account_name buyer, account_name owner, uint64_t orderid);
     //@abi action
-    void finishorder(account_name seller, account_name owner, uint64_t orderid, string datahash);
+    void uploadhash(account_name seller, account_name owner, uint64_t dealid, string datahash);
     //@abi action
     void deposit( account_name from, asset& quantity );
     //@abi action
@@ -57,8 +58,9 @@ private:
         uint64_t padding; //(fixme) this is just a simple workaround because modify primary key is not allowed.
         uint64_t availmarketid; 
         uint64_t availorderid; 
+        uint64_t availdealid; 
         uint64_t primary_key() const { return padding; }
-        EOSLIB_SERIALIZE( availableid, (padding)(availmarketid)(availorderid))
+        EOSLIB_SERIALIZE( availableid, (padding)(availmarketid)(availorderid)(availdealid))
     };
 
     multi_index <N(availableid), availableid> _availableid;
@@ -99,23 +101,30 @@ private:
     static const uint64_t orderstate_canceled = 3;
     static const uint64_t orderstate_end = 4;
 
+    //@abi table deals i64
+    struct deal {
+        uint64_t dealid;
+        uint64_t orderid;
+        account_name buyer;
+        uint64_t orderstate;
+        string datahash;
+
+        uint64_t primary_key() const { return dealid; }
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(buyer)(orderstate)(datahash))
+    }; 
+    multi_index< N(deals), deal> _deals;
+
     //@abi table askingorders i64
     struct askingorder {
         uint64_t orderid;     //orderid is the primary key for quick erase of pening asking orders
         uint64_t marketid; 
-
-        //account of the seller
         account_name seller;
-        //the buyer try to fill this order
-        account_name buyer;
         asset price;
-        uint64_t orderstate;
-        string datahash;
 
         uint64_t primary_key() const { return orderid; }
         uint64_t by_seller() const { return seller; }
         uint64_t by_marketid() const { return marketid; }
-        EOSLIB_SERIALIZE( askingorder, (orderid)(marketid)(seller)(buyer)(price)(orderstate)(datahash))
+        EOSLIB_SERIALIZE( askingorder, (orderid)(marketid)(seller)(price))
     };
 
     bool hasorder_bymarketid( account_name id)const {
@@ -147,4 +156,4 @@ private:
 
     multi_index< N(accounts), account> _accounts;
 };
-EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(buyercancel)(tryfillorder)(eraseorder)(finishorder)(deposit)(withdraw)(regpkey)(deregpkey))
+EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(buyercancel)(makedeal)(eraseorder)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey))
