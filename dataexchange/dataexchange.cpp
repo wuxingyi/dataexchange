@@ -82,43 +82,35 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
 }
 
 void dataexchange::cancelorder(account_name seller, account_name owner, uint64_t orderid) {
-//    require_auth(seller);
-//
-//    ordertable orders(_self, owner);
-//    auto iter = orders.find(orderid);
-//
-//    eosio_assert(iter != orders.end() , "no such order");
-//    eosio_assert(iter->seller == seller, "order doesn't belong to you");
-//    eosio_assert(iter->orderstate != orderstate_finished, "only unfinished orders can be canceled");
-//    orders.erase(iter);
+    require_auth(seller);
+
+    ordertable orders(_self, owner);
+    auto iter = orders.find(orderid);
+
+    eosio_assert(iter != orders.end() , "no such order");
+    eosio_assert(iter->seller == seller, "order doesn't belong to you");
+    orders.erase(iter);
 }
 
-void dataexchange::buyercancel(account_name buyer, account_name owner, uint64_t orderid) {}
-//    require_auth(buyer);
-//
-//    ordertable orders(_self, owner);
-//    auto iter = orders.find(orderid);
-//
-//    eosio_assert(iter != orders.end() , "no such order");
-//    eosio_assert(iter->buyer == buyer, "order doesn't belong to you");
-//    eosio_assert(iter->orderstate == orderstate_waitinghash, "only orders in orderstate_waitinghash state can be canceled");
-//
-//    orders.modify( iter, 0, [&]( auto& order) {
-//       order.buyer = 0;
-//       order.orderstate = orderstate_start;
-//    });
-//}
+void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t dealid) {
+    require_auth(buyer);
 
-void dataexchange::eraseorder(account_name seller, account_name owner, uint64_t orderid) {
-//    require_auth(seller);
-//
-//    ordertable orders(_self, owner);
-//    auto iter = orders.find(orderid);
-//
-//    eosio_assert(iter != orders.end() , "no such order");
-//    eosio_assert(iter->seller == seller, "order doesn't belong to you");
-//    eosio_assert(iter->orderstate == orderstate_finished, "only finished orders can be erased");
-//    orders.erase(iter);
+    auto dealiter = _deals.find(dealid);
+    eosio_assert(dealiter != _deals.end() , "no such deal");
+
+    ordertable orders(_self, owner);
+    auto iter = orders.find(dealiter->orderid);
+    eosio_assert(iter != orders.end() , "no such order or order has already been canceled");
+
+    eosio_assert(dealiter->orderstate == orderstate_waitinghash, "order state is not orderstate_waitinghash");
+    _deals.erase(dealiter);
+}
+
+void dataexchange::erasedeal(account_name owner, uint64_t dealid) {
+    auto dealiter = _deals.find(dealid);
+    eosio_assert(dealiter != _deals.end() , "no such deal");
+    eosio_assert(dealiter->orderstate == orderstate_finished, "order state is not orderstate_waitinghash");
+    _deals.erase(dealiter);
 }
 
 //owner is the market owner, not the seller, seller is stored in struct order.
@@ -143,7 +135,6 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
     _availableid.modify( iditer, 0, [&]( auto& row) {
         row.availdealid = id;
     });
-
 
     //use self scope to make it simple for memory deleting.
     //it's not good for the seller to erase such entry because he may not see the datahash if the entry is deleted by seller too quickly.
@@ -182,6 +173,7 @@ void dataexchange::uploadhash(account_name seller, account_name owner, uint64_t 
 }
 
 void dataexchange::deposit(account_name from, asset& quantity ) {
+   require_auth( from);
    
    eosio_assert( quantity.is_valid(), "invalid quantity" );
    eosio_assert( quantity.amount > 0, "must deposit positive quantity" );

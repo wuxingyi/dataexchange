@@ -29,9 +29,9 @@ public:
     //@abi action
     void cancelorder(account_name seller, account_name owner, uint64_t orderid);
     //@abi action
-    void buyercancel(account_name buyer, account_name owner, uint64_t orderid);
+    void canceldeal(account_name buyer, account_name owner, uint64_t orderid);
     //@abi action
-    void eraseorder(account_name seller, account_name owner, uint64_t orderid);
+    void erasedeal(account_name owner, uint64_t dealid);
     //@abi action
     void makedeal(account_name buyer, account_name owner, uint64_t orderid);
     //@abi action
@@ -156,4 +156,4 @@ private:
 
     multi_index< N(accounts), account> _accounts;
 };
-EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(buyercancel)(makedeal)(eraseorder)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey))
+EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey))
