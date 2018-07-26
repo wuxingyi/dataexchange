@@ -23,23 +23,20 @@ void dataexchange::createmarket(account_name owner, uint64_t type, string desp){
     eosio_assert(hasmarket_byaccountname(owner) == false, "an account can only create only one market now");
     eosio_assert((type > typestart && type < typeend), "out of market type");
 
-    auto iter = _availableid.begin();
-    uint64_t id = 0;
-    if (iter == _availableid.end()) {
-        _availableid.emplace( _self, [&]( auto& row) {
-            row.availmarketid = id;
-            row.availorderid = 0;
-            row.padding = 0;
-        });
+    uint64_t newid = 0;
+    auto isexist = _availableid.exists();
+    if (!isexist) {
+        newid = 0;
+        availableid aid;
+        _availableid.set(aid, _self);
     } else {
-        id = iter->availmarketid + 1;
-        _availableid.modify( iter, 0, [&]( auto& row) {
-            row.availmarketid = id;
-        });
+        auto iditem = _availableid.get();
+        newid = iditem.availmarketid++;
+        _availableid.set(iditem, _self);
     }
 
     _markets.emplace( _self, [&]( auto& row) {
-        row.marketid = id;
+        row.marketid = newid;
         row.mowner = owner;
         row.mtype = type;
         row.mdesp = desp;
@@ -51,14 +48,9 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
 
     eosio_assert(hasmareket_byid(marketid) == true, "no such market");
 
-    auto iter = _availableid.begin();
-    eosio_assert(iter != _availableid.end(), "availableid should have been initialized");
-
-    uint64_t id = 0;
-    id = iter->availorderid + 1;
-    _availableid.modify( iter, 0, [&]( auto& row) {
-        row.availorderid = id;
-    });
+    auto iditem = _availableid.get();
+    auto newid = iditem.availorderid++;
+    _availableid.set(availableid{iditem.availmarketid, newid, iditem.availdealid}, _self);
 
     auto miter = _markets.find(marketid);
     eosio_assert(miter->mowner != seller, "please don't sell on your own market");
@@ -66,7 +58,7 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
 
     // we can only put it to the contract owner scope
     orders.emplace(seller, [&]( auto& order) {
-        order.orderid = id;
+        order.orderid = newid;
         order.seller = seller;
         order.marketid = marketid;
         order.price = price;
@@ -129,17 +121,14 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
        acnt.asset_balance -= iter->price;
     });
 
-    auto iditer = _availableid.begin();
-    uint64_t id = 0;
-    id = iditer->availdealid + 1;
-    _availableid.modify( iditer, 0, [&]( auto& row) {
-        row.availdealid = id;
-    });
+    auto iditem = _availableid.get();
+    auto newid = iditem.availdealid++;
+    _availableid.set(availableid{iditem.availmarketid, iditem.availorderid, newid}, _self);
 
     //use self scope to make it simple for memory deleting.
     //it's not good for the seller to erase such entry because he may not see the datahash if the entry is deleted by seller too quickly.
     _deals.emplace(_self, [&](auto& deal) { 
-        deal.dealid = id;
+        deal.dealid = newid;
         deal.orderid = orderid;
         deal.datahash = "";
         deal.orderstate = orderstate_waitinghash;

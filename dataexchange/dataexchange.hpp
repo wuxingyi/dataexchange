@@ -2,6 +2,7 @@
 #include <eosiolib/print.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/crypto.h>
+#include<eosiolib/singleton.hpp>
 #include <cstring>
 
 using namespace eosio;
@@ -15,9 +16,9 @@ using contract::contract;
 public:
     dataexchange( account_name self ) :
         contract(self),
-        _availableid(_self, _self),
         _markets(_self, _self),
         _accounts(_self, _self),
+        _availableid(_self, _self),
         _deals(_self, _self){}
 
     //@abi action
@@ -52,18 +53,16 @@ private:
     static const uint64_t sellouts = 4;        
     static const uint64_t typeend = 5;
 
-
-    //@abi table availableid i64
     struct availableid {
-        uint64_t padding; //(fixme) this is just a simple workaround because modify primary key is not allowed.
         uint64_t availmarketid; 
         uint64_t availorderid; 
         uint64_t availdealid; 
-        uint64_t primary_key() const { return padding; }
-        EOSLIB_SERIALIZE( availableid, (padding)(availmarketid)(availorderid)(availdealid))
+        availableid():availmarketid(0),availorderid(0),availdealid(0){}
+        availableid(uint64_t mid, uint64_t oid, uint64_t did):availmarketid(mid),availorderid(oid),availdealid(did){}
+        EOSLIB_SERIALIZE( availableid, (availmarketid)(availorderid)(availdealid))
     };
 
-    multi_index <N(availableid), availableid> _availableid;
+    singleton<N(availableid), availableid> _availableid;
 
     //@abi table datamarkets i64
     struct datamarket {
