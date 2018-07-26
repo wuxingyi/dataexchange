@@ -166,7 +166,12 @@ void dataexchange::uploadhash(account_name seller, account_name owner, uint64_t 
 
     // add token to seller's account
     auto selleriter = _accounts.find(iter->seller);
-    eosio_assert(selleriter != _accounts.end() , "seller should have an account");
+    if( selleriter == _accounts.end() ) {
+        selleriter = _accounts.emplace(_self, [&](auto& acnt){
+            acnt.owner = seller;
+        });
+    }
+
     _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
        acnt.asset_balance += iter->price;
     });
