@@ -24,15 +24,12 @@ void dataexchange::createmarket(account_name owner, uint64_t type, string desp){
     eosio_assert((type > typestart && type < typeend), "out of market type");
 
     uint64_t newid = 0;
-    auto isexist = _availableid.exists();
-    if (!isexist) {
-        newid = 0;
-        availableid aid;
-        _availableid.set(aid, _self);
-    } else {
+    if (_availableid.exists()) {
         auto iditem = _availableid.get();
         newid = ++iditem.availmarketid;
         _availableid.set(iditem, _self);
+    } else {
+        _availableid.set(availableid(), _self);
     }
 
     _markets.emplace( _self, [&]( auto& row) {
