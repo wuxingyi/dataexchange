@@ -81,9 +81,9 @@ cleos get table dex dex accounts
 
 # 8.sellers erase deal to reduce memory usage
 echo "STEP 8: sellers erase deal to reduce memory usage"
-cleos push action dex erasedeal '["datasource1", 1]' -p seller1
-cleos push action dex erasedeal '["datasource1", 2]' -p seller2
-cleos push action dex erasedeal '["datasource1", 3]' -p seller3
+cleos push action dex erasedeal '[1]' -p seller1
+cleos push action dex erasedeal '[2]' -p seller2
+cleos push action dex erasedeal '[3]' -p seller3
 cleos get table dex datasource1 askingorders
 
 # 9.buyers withdraw their tokens

@@ -98,7 +98,7 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
     _deals.erase(dealiter);
 }
 
-void dataexchange::erasedeal(account_name owner, uint64_t dealid) {
+void dataexchange::erasedeal(uint64_t dealid) {
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
     eosio_assert(dealiter->orderstate == orderstate_finished, "order state is not orderstate_waitinghash");

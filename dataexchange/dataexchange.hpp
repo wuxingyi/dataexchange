@@ -32,7 +32,7 @@ public:
     //@abi action
     void canceldeal(account_name buyer, account_name owner, uint64_t orderid);
     //@abi action
-    void erasedeal(account_name owner, uint64_t dealid);
+    void erasedeal(uint64_t dealid);
     //@abi action
     void makedeal(account_name buyer, account_name owner, uint64_t orderid);
     //@abi action
