@@ -47,7 +47,7 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
 
     auto iditem = _availableid.get();
     auto newid = ++iditem.availorderid;
-    _availableid.set(availableid{iditem.availmarketid, newid, iditem.availdealid}, _self);
+    _availableid.set(availableid(iditem.availmarketid, newid, iditem.availdealid), _self);
 
     auto miter = _markets.find(marketid);
     eosio_assert(miter->mowner != seller, "please don't sell on your own market");
@@ -120,7 +120,7 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
 
     auto iditem = _availableid.get();
     auto newid = ++iditem.availdealid;
-    _availableid.set(availableid{iditem.availmarketid, iditem.availorderid, newid}, _self);
+    _availableid.set(availableid(iditem.availmarketid, iditem.availorderid, newid), _self);
 
     //use self scope to make it simple for memory deleting.
     //it's not good for the seller to erase such entry because he may not see the datahash if the entry is deleted by seller too quickly.
