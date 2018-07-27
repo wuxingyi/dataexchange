@@ -92,7 +92,15 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
     eosio_assert(iter != orders.end() , "no such order or order has already been canceled");
 
     eosio_assert(dealiter->orderstate == orderstate_waitinghash, "order state is not orderstate_waitinghash");
+    eosio_assert(dealiter->buyer == buyer, "not belong to this buyer");
     _deals.erase(dealiter);
+
+    // refund buyer's tokens
+    auto buyeritr = _accounts.find(buyer);
+    eosio_assert(buyeritr != _accounts.end() , "buyer should have have account");
+    _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
+       acnt.asset_balance += iter->price;
+    });
 }
 
 void dataexchange::erasedeal(uint64_t dealid) {
