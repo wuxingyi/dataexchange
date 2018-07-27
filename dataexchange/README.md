@@ -58,3 +58,7 @@ cleos push action dddd cancelorder '["eosio","bdibxtljzc",0]' -p eosio
   "more": false
 }
 ```
+# order and deal design
+orders can be filled multiple times by calling ```makedeal``` abi, each time ```makedeal``` is called, a new deal is created with an unique ```dealid```.  
+if an order is canceled by the seller, no more deals can be made anymore, but pending deals can be continue to finish.  
+anyone can remove finished deal data by calling ```erasedeal``` to reduce memory usage, this is very important for a dapp with much active users.   
