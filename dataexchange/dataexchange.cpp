@@ -31,7 +31,7 @@ void dataexchange::createmarket(account_name owner, uint64_t type, string desp){
         _availableid.set(aid, _self);
     } else {
         auto iditem = _availableid.get();
-        newid = iditem.availmarketid++;
+        newid = ++iditem.availmarketid;
         _availableid.set(iditem, _self);
     }
 
@@ -49,7 +49,7 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
     eosio_assert(hasmareket_byid(marketid) == true, "no such market");
 
     auto iditem = _availableid.get();
-    auto newid = iditem.availorderid++;
+    auto newid = ++iditem.availorderid;
     _availableid.set(availableid{iditem.availmarketid, newid, iditem.availdealid}, _self);
 
     auto miter = _markets.find(marketid);
@@ -122,7 +122,7 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
     });
 
     auto iditem = _availableid.get();
-    auto newid = iditem.availdealid++;
+    auto newid = ++iditem.availdealid;
     _availableid.set(availableid{iditem.availmarketid, iditem.availorderid, newid}, _self);
 
     //use self scope to make it simple for memory deleting.
