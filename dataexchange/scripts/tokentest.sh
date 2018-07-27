@@ -79,23 +79,30 @@ cleos get currency balance xingyitoken seller2
 cleos get currency balance xingyitoken seller3
 cleos get table dex dex accounts
 
-# 8.sellers erase deal to reduce memory usage
+# 8.sellers erase finished deal to reduce memory usage
 echo "STEP 8: sellers erase deal to reduce memory usage"
 cleos push action dex erasedeal '[1]' -p seller1
 cleos push action dex erasedeal '[2]' -p seller2
 cleos push action dex erasedeal '[3]' -p seller3
 cleos get table dex datasource1 askingorders
 
-# 9.buyers withdraw their tokens
-echo "STEP 9: buyers withdraw their tokens"
+# 9.buyer cancel order 
+echo "STEP 9: buyer cancel order and get refund"
+cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
+cleos get table dex dex accounts
+cleos push action dex canceldeal ' ["buyer1", "datasource1", 4]' -p buyer1
+cleos get table dex dex accounts
+
+# 10.buyers withdraw their tokens
+echo "STEP 10: buyers withdraw their tokens"
 #each buyer buy data for 3 SYS, so left only 97 each
 cleos push action dex withdraw '[ "buyer1", "97.0000 SYS" ]' -p buyer1
 cleos push action dex withdraw '[ "buyer2", "97.0000 SYS" ]' -p buyer2
 # now there are no account stored, all memory freed
 cleos get table dex dex accounts
 
-# 10.sellers reg and dereg keys
-echo "STEP 10: sellers reg and dereg keys"
+# 11.sellers reg and dereg keys
+echo "STEP 11: sellers reg and dereg keys"
 cleos push action dex regpkey '[ "seller1", "EOS5K8BJWoKQZUu1UDn9MyWBDV4yiHfF6AcWe6P7626GaNW4LEpsa" ]' -p seller1
 cleos push action dex regpkey '[ "seller2", "EOS8PZ6B8ajgDLUKzHKMdk127B5sAfZEhSav6ZbhPs8MdymcVP3bR" ]' -p seller2
 cleos push action dex deposit '[ "seller1", "1.0000 SYS" ]' -p seller1
