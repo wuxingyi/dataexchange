@@ -166,8 +166,23 @@ void dataexchange::uploadhash(account_name seller, account_name owner, uint64_t 
         });
     }
 
+    auto sellertoken = asset(uint64_t(0.9 * iter->price.amount));
+    auto sourcetoken = asset(uint64_t(0.1 * iter->price.amount));
+
     _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
-       acnt.asset_balance += iter->price;
+       acnt.asset_balance += sellertoken;
+    });
+
+    // add token to data source account
+    auto sourceitr = _accounts.find(owner);
+    if( sourceitr == _accounts.end() ) {
+        sourceitr = _accounts.emplace(_self, [&](auto& acnt){
+            acnt.owner = owner;
+        });
+    }
+
+    _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
+       acnt.asset_balance += sourcetoken;
     });
 }
 

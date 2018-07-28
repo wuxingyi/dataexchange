@@ -35,8 +35,8 @@ cleos get currency balance xingyitoken buyer2
 
 # 2.two buyers all deposit their COIN to the contract
 echo "STEP 2: deposit some coins to contract"
-cleos push action dex deposit '[ "buyer1", "100.0000 SYS" ]' -p buyer1
-cleos push action dex deposit '[ "buyer2", "100.0000 SYS" ]' -p buyer2
+cleos push action dex deposit '[ "buyer1", "1000.0000 SYS" ]' -p buyer1
+cleos push action dex deposit '[ "buyer2", "1000.0000 SYS" ]' -p buyer2
 cleos get currency balance xingyitoken buyer1
 cleos get currency balance xingyitoken buyer2
 cleos get currency balance xingyitoken dex
@@ -48,9 +48,9 @@ cleos push action dex createmarket ' {"owner": "datasource2", "desp": "datasourc
 
 # 4.seller1 and seller2 both create asking order
 echo "STEP 4: seller1 and seller2 both create asking order"
-cleos push action dex createorder ' {"seller": "seller1", "marketid": 0, "price": "1.0000 SYS"} ' -p seller1
-cleos push action dex createorder ' {"seller": "seller2", "marketid": 0, "price": "2.0000 SYS"} ' -p seller2
-cleos push action dex createorder ' {"seller": "seller3", "marketid": 0, "price": "3.0000 SYS"} ' -p seller3
+cleos push action dex createorder ' {"seller": "seller1", "marketid": 0, "price": "10.0000 SYS"} ' -p seller1
+cleos push action dex createorder ' {"seller": "seller2", "marketid": 0, "price": "20.0000 SYS"} ' -p seller2
+cleos push action dex createorder ' {"seller": "seller3", "marketid": 0, "price": "30.0000 SYS"} ' -p seller3
 cleos get table dex datasource1 askingorders
 
 
@@ -73,38 +73,45 @@ cleos get table dex dex deals
 
 # 7.sellers withdraw their tokens
 echo "STEP 7: sellers withdraw their tokens"
-cleos push action dex withdraw '[ "seller1", "1.0000 SYS" ]' -p seller1
-cleos push action dex withdraw '[ "seller2", "2.0000 SYS" ]' -p seller2
-cleos push action dex withdraw '[ "seller3", "3.0000 SYS" ]' -p seller3
+cleos push action dex withdraw '[ "seller1", "9.0000 SYS" ]' -p seller1
+cleos push action dex withdraw '[ "seller2", "18.0000 SYS" ]' -p seller2
+cleos push action dex withdraw '[ "seller3", "27.0000 SYS" ]' -p seller3
 cleos get currency balance xingyitoken seller1
 cleos get currency balance xingyitoken seller2
 cleos get currency balance xingyitoken seller3
 cleos get table dex dex accounts
 
-# 8.sellers erase finished deal to reduce memory usage
-echo "STEP 8: sellers erase deal to reduce memory usage"
+# 8.datasource withdraw token
+echo "STEP 7: datasource withdraw their tokens"
+cleos push action dex withdraw '[ "datasource1", "6.0000 SYS" ]' -p datasource1
+cleos get currency balance xingyitoken datasource1
+cleos get table dex dex accounts
+
+
+# 9.sellers erase finished deal to reduce memory usage
+echo "STEP 9: sellers erase deal to reduce memory usage"
 cleos push action dex erasedeal '[1]' -p seller1
 cleos push action dex erasedeal '[2]' -p seller2
 cleos push action dex erasedeal '[3]' -p seller3
 cleos get table dex datasource1 askingorders
 
-# 9.buyer cancel order 
-echo "STEP 9: buyer cancel order and get refund"
+# 10.buyer cancel order 
+echo "STEP 10: buyer cancel order and get refund"
 cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
 cleos get table dex dex accounts
 cleos push action dex canceldeal ' ["buyer1", "datasource1", 4]' -p buyer1
 cleos get table dex dex accounts
 
-# 10.buyers withdraw their tokens
-echo "STEP 10: buyers withdraw their tokens"
+# 11.buyers withdraw their tokens
+echo "STEP 11: buyers withdraw their tokens"
 #each buyer buy data for 3 SYS, so left only 97 each
 cleos push action dex withdraw '[ "buyer1", "97.0000 SYS" ]' -p buyer1
 cleos push action dex withdraw '[ "buyer2", "97.0000 SYS" ]' -p buyer2
 # now there are no account stored, all memory freed
 cleos get table dex dex accounts
 
-# 11.sellers reg and dereg keys
-echo "STEP 11: sellers reg and dereg keys"
+# 12.sellers reg and dereg keys
+echo "STEP 12: sellers reg and dereg keys"
 cleos push action dex regpkey '[ "seller1", "EOS5K8BJWoKQZUu1UDn9MyWBDV4yiHfF6AcWe6P7626GaNW4LEpsa" ]' -p seller1
 cleos push action dex regpkey '[ "seller2", "EOS8PZ6B8ajgDLUKzHKMdk127B5sAfZEhSav6ZbhPs8MdymcVP3bR" ]' -p seller2
 cleos push action dex deposit '[ "seller1", "1.0000 SYS" ]' -p seller1
