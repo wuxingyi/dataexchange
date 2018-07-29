@@ -40,6 +40,59 @@ void dataexchange::createmarket(account_name owner, uint64_t type, string desp){
     });
 }
 
+void dataexchange::suspendmkt(account_name owner, uint64_t marketid){
+    //only the market owner can suspend a market
+    require_auth(owner);
+
+    auto iter = _markets.find(marketid);
+    eosio_assert(iter != _markets.end(), "market not have been created yet");
+    eosio_assert(iter->mowner == owner , "have no permission to this market");
+    eosio_assert(iter->issuspended == false, "market should be work now");
+
+    ordertable orders(_self, owner);
+    auto orderiter = orders.begin();
+    while(true) {
+        if (orderiter != orders.end()) {
+             orders.modify( orderiter, 0, [&]( auto& order) {
+                order.issuspended = true;
+             });
+            orderiter++;
+        } else {
+            break;
+        }
+    }
+    _markets.modify( iter, 0, [&]( auto& mkt) {
+       mkt.issuspended = true;
+    });
+}
+
+void dataexchange::resumemkt(account_name owner, uint64_t marketid){
+    //only the market owner can resume a market
+    require_auth(owner);
+
+    auto iter = _markets.find(marketid);
+    eosio_assert(iter != _markets.end(), "market not have been created yet");
+    eosio_assert(iter->mowner == owner , "have no permission to this market");
+    eosio_assert(iter->issuspended == true, "market should be suspened");
+
+    ordertable orders(_self, owner);
+    auto orderiter = orders.begin();
+    while(true) {
+        if (orderiter != orders.end()) {
+             orders.modify( orderiter, 0, [&]( auto& order) {
+                order.issuspended = true;
+             });
+            orderiter++;
+        } else {
+            break;
+        }
+    }
+    _markets.modify( iter, 0, [&]( auto& mkt) {
+       mkt.issuspended = false;
+    });
+}
+
+
 void dataexchange::createorder(account_name seller, uint64_t marketid, asset& price) {
     require_auth(seller);
 
@@ -51,6 +104,7 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
 
     auto miter = _markets.find(marketid);
     eosio_assert(miter->mowner != seller, "please don't sell on your own market");
+    eosio_assert(miter->issuspended != true, "this market has already suspened, can't create orders");
     ordertable orders(_self, miter->mowner); 
 
     // we can only put it to the contract owner scope
@@ -79,8 +133,8 @@ void dataexchange::suspendorder(account_name seller, account_name owner, uint64_
     eosio_assert(iter != orders.end() , "no such order");
     eosio_assert(iter->seller == seller, "order doesn't belong to you");
     eosio_assert(iter->issuspended == false, "order should be work");
-    orders.modify( iter, 0, [&]( auto& acnt ) {
-       acnt.issuspended = true;
+    orders.modify( iter, 0, [&]( auto& order) {
+       order.issuspended = true;
     });
 }
 
@@ -93,8 +147,8 @@ void dataexchange::resumeorder(account_name seller, account_name owner, uint64_t
     eosio_assert(iter != orders.end() , "no such order");
     eosio_assert(iter->seller == seller, "order doesn't belong to you");
     eosio_assert(iter->issuspended == true, "order should be suspened");
-    orders.modify( iter, 0, [&]( auto& acnt ) {
-       acnt.issuspended = false;
+    orders.modify( iter, 0, [&]( auto& order) {
+       order.issuspended = false;
     });
 }
 

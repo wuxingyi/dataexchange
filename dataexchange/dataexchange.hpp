@@ -51,6 +51,10 @@ public:
     void suspendorder(account_name seller, account_name owner, uint64_t orderid);
     //@abi action
     void resumeorder(account_name seller, account_name owner, uint64_t orderid);
+    //@abi action
+    void suspendmkt(account_name owner, uint64_t marketid);
+    //@abi action
+    void resumemkt(account_name owner, uint64_t marketid);
 
 private:
     static const uint64_t typestart = 0;
@@ -77,11 +81,12 @@ private:
         uint64_t mtype;
         string mdesp;
         account_name mowner;
+        bool issuspended;
 
         uint64_t primary_key() const { return marketid; }
         uint64_t by_mtype() const { return mtype; }
         uint64_t by_mowner() const { return mowner; }
-        EOSLIB_SERIALIZE( datamarket, (marketid)(mtype)(mdesp)(mowner))
+        EOSLIB_SERIALIZE( datamarket, (marketid)(mtype)(mdesp)(mowner)(issuspended))
     };
 
     bool hasmareket_byid(uint64_t id)const {
@@ -168,5 +173,5 @@ private:
     multi_index< N(accounts), account> _accounts;
 };
 EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)
-           (authorize)(suspendorder)(resumeorder)
+           (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)
          )
