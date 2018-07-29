@@ -47,6 +47,11 @@ public:
     void deregpkey( account_name owner);
     //@abi action
     void authorize(account_name seller, uint64_t dealid);
+    //@abi action
+    void suspendorder(account_name seller, account_name owner, uint64_t orderid);
+    //@abi action
+    void resumeorder(account_name seller, account_name owner, uint64_t orderid);
+
 private:
     static const uint64_t typestart = 0;
     static const uint64_t authorities = 1;
@@ -125,11 +130,12 @@ private:
         uint64_t marketid; 
         account_name seller;
         asset price;
+        bool issuspended; 
 
         uint64_t primary_key() const { return orderid; }
         uint64_t by_seller() const { return seller; }
         uint64_t by_marketid() const { return marketid; }
-        EOSLIB_SERIALIZE( askingorder, (orderid)(marketid)(seller)(price))
+        EOSLIB_SERIALIZE( askingorder, (orderid)(marketid)(seller)(price)(issuspended))
     };
 
     bool hasorder_bymarketid( account_name id)const {
@@ -161,4 +167,6 @@ private:
 
     multi_index< N(accounts), account> _accounts;
 };
-EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)(authorize))
+EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)
+           (authorize)(suspendorder)(resumeorder)
+         )

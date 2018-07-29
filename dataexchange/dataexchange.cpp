@@ -70,6 +70,34 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
    }
 }
 
+void dataexchange::suspendorder(account_name seller, account_name owner, uint64_t orderid) {
+    require_auth(seller);
+
+    ordertable orders(_self, owner);
+    auto iter = orders.find(orderid);
+
+    eosio_assert(iter != orders.end() , "no such order");
+    eosio_assert(iter->seller == seller, "order doesn't belong to you");
+    eosio_assert(iter->issuspended == false, "order should be work");
+    orders.modify( iter, 0, [&]( auto& acnt ) {
+       acnt.issuspended = true;
+    });
+}
+
+void dataexchange::resumeorder(account_name seller, account_name owner, uint64_t orderid) {
+    require_auth(seller);
+
+    ordertable orders(_self, owner);
+    auto iter = orders.find(orderid);
+
+    eosio_assert(iter != orders.end() , "no such order");
+    eosio_assert(iter->seller == seller, "order doesn't belong to you");
+    eosio_assert(iter->issuspended == true, "order should be suspened");
+    orders.modify( iter, 0, [&]( auto& acnt ) {
+       acnt.issuspended = false;
+    });
+}
+
 void dataexchange::cancelorder(account_name seller, account_name owner, uint64_t orderid) {
     require_auth(seller);
 
@@ -113,6 +141,7 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
     auto iter = orders.find(orderid);
 
     eosio_assert(iter != orders.end() , "no such order");
+    eosio_assert(iter->issuspended != true , "can not make deals because the order is suspended");
 
     // buyer costs tokens
     auto buyeritr = _accounts.find(buyer);

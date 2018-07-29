@@ -72,6 +72,17 @@ cleos get table dex datasource1 askingorders
 cleos get table dex dex accounts
 cleos get table dex dex deals
 
+# 5.3 test suspendorder and resumeorder
+echo "STEP 5.3: test suspendorder and resumeorder"
+cleos push action dex suspendorder '{"seller": "seller1", "owner":"datasource1", "orderid": 1} ' -p seller1
+cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
+cleos push action dex resumeorder '{"seller": "seller1", "owner":"datasource1", "orderid": 1} ' -p seller1
+cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
+cleos get table dex datasource1 askingorders
+cleos get table dex dex accounts
+cleos get table dex dex deals
+
+
 # 6.seller upload datahash(calling uploadhash)
 echo "STEP 6: send datahash"
 cleos push action dex uploadhash '[ "datasource1", 1, "asdfasdf"]' -p datasource1
