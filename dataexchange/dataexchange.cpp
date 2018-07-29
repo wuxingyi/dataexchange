@@ -86,7 +86,7 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
 
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
-    eosio_assert(dealiter->orderstate == orderstate_waitinghash, "order state is not orderstate_waitinghash");
+    eosio_assert(dealiter->orderstate == orderstate_waitinghash || dealiter->orderstate == orderstate_waitingauthorize, "order state is not orderstate_waitinghash");
     eosio_assert(dealiter->buyer == buyer, "not belong to this buyer");
     _deals.erase(dealiter);
 
@@ -132,35 +132,45 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
         deal.marketowner = owner;
         deal.orderid = orderid;
         deal.datahash = "";
-        deal.orderstate = orderstate_waitinghash;
+        deal.orderstate = orderstate_waitingauthorize;
         deal.buyer = buyer;
+        deal.seller = iter->seller;
         deal.price = iter->price;
     });
 }
 
-//datahash is generated using the buyers public key encrypted user's data.
-void dataexchange::uploadhash(account_name seller, uint64_t dealid, string datahash) {
+void dataexchange::authorize(account_name seller, uint64_t dealid) {
     require_auth(seller);
 
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
+    eosio_assert(dealiter->orderstate == orderstate_waitingauthorize, "order state is not orderstate_waitingauthorize");
+    eosio_assert(dealiter->seller == seller, "this deal doesnot belong to you");
+    _deals.modify( dealiter, 0, [&]( auto& deal) {
+       deal.orderstate = orderstate_waitinghash;
+    });
+}
 
-    //order may be canceld but the deal can still be processed if the seller want to.
-    //ordertable orders(_self, dealiter->marketowner);
-    //auto iter = orders.find(dealiter->orderid);
-    //eosio_assert(iter != orders.end() , "no such order");
 
+//datahash is generated using the buyers public key encrypted user's data.
+//uploadhash is called by datasource(aka market owner).
+void dataexchange::uploadhash(account_name marketowner, uint64_t dealid, string datahash) {
+    require_auth(marketowner);
+
+    auto dealiter = _deals.find(dealid);
+    eosio_assert(dealiter != _deals.end() , "no such deal");
     eosio_assert(dealiter->orderstate == orderstate_waitinghash, "order state is not orderstate_waitinghash");
+    eosio_assert(dealiter->marketowner == marketowner, "not correct market owner");
     _deals.modify( dealiter, 0, [&]( auto& deal) {
        deal.datahash = datahash;
        deal.orderstate = orderstate_finished;
     });
 
     // add token to seller's account
-    auto selleriter = _accounts.find(seller);
+    auto selleriter = _accounts.find(dealiter->seller);
     if( selleriter == _accounts.end() ) {
         selleriter = _accounts.emplace(_self, [&](auto& acnt){
-            acnt.owner = seller;
+            acnt.owner = dealiter->seller;
         });
     }
 

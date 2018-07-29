@@ -54,8 +54,8 @@ cleos push action dex createorder ' {"seller": "seller3", "marketid": 0, "price"
 cleos get table dex datasource1 askingorders
 
 
-# 5.try make deals
-echo "STEP 5: make deal"
+# 5.1 try make deals
+echo "STEP 5.1: make deal"
 cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
 cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 2} ' -p buyer1
 cleos push action dex makedeal ' {"buyer": "buyer2", "owner": "datasource1", "orderid": 3} ' -p buyer2
@@ -63,11 +63,20 @@ cleos get table dex datasource1 askingorders
 cleos get table dex dex accounts
 cleos get table dex dex deals
 
+# 5.2 authorize the deal
+echo "STEP 5.2: authorize the deal deal"
+cleos push action dex authorize ' {"seller": "seller1", "dealid": 1} ' -p seller1
+cleos push action dex authorize ' {"seller": "seller2", "dealid": 2} ' -p seller2
+cleos push action dex authorize ' {"seller": "seller3", "dealid": 3} ' -p seller3
+cleos get table dex datasource1 askingorders
+cleos get table dex dex accounts
+cleos get table dex dex deals
+
 # 6.seller upload datahash(calling uploadhash)
 echo "STEP 6: send datahash"
-cleos push action dex uploadhash '[ "seller1", 1, "asdf" ]' -p seller1
-cleos push action dex uploadhash '[ "seller2", 2, "asdfasf" ]' -p seller2
-cleos push action dex uploadhash '[ "seller3", 3, "asdfasf" ]' -p seller3
+cleos push action dex uploadhash '[ "datasource1", 1, "asdfasdf"]' -p datasource1
+cleos push action dex uploadhash '[ "datasource1", 2, "asdfasf" ]' -p datasource1
+cleos push action dex uploadhash '[ "datasource1", 3, "asdfasf" ]' -p datasource1
 cleos get table dex dex accounts
 cleos get table dex dex deals
 

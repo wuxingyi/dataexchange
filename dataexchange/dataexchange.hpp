@@ -45,6 +45,8 @@ public:
     void regpkey( account_name owner, string pkey) ;
     //@abi action
     void deregpkey( account_name owner);
+    //@abi action
+    void authorize(account_name seller, uint64_t dealid);
 private:
     static const uint64_t typestart = 0;
     static const uint64_t authorities = 1;
@@ -95,10 +97,11 @@ private:
     > _markets;
 
     static const uint64_t orderstate_start = 0;
-    static const uint64_t orderstate_waitinghash = 1;
-    static const uint64_t orderstate_finished = 2;
-    static const uint64_t orderstate_canceled = 3;
-    static const uint64_t orderstate_end = 4;
+    static const uint64_t orderstate_waitingauthorize = 1;
+    static const uint64_t orderstate_waitinghash = 2;
+    static const uint64_t orderstate_finished = 3;
+    static const uint64_t orderstate_canceled = 4;
+    static const uint64_t orderstate_end = 5;
 
     //@abi table deals i64
     struct deal {
@@ -106,12 +109,13 @@ private:
         uint64_t orderid;
         account_name marketowner;
         account_name buyer;
+        account_name seller;
         uint64_t orderstate;
         string datahash;
         asset price;
 
         uint64_t primary_key() const { return dealid; }
-        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketowner)(buyer)(orderstate)(datahash)(price))
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketowner)(buyer)(seller)(orderstate)(datahash)(price))
     }; 
     multi_index< N(deals), deal> _deals;
 
@@ -157,4 +161,4 @@ private:
 
     multi_index< N(accounts), account> _accounts;
 };
-EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey))
+EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)(authorize))
