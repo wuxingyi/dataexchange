@@ -36,7 +36,7 @@ public:
     //@abi action
     void makedeal(account_name buyer, account_name owner, uint64_t orderid);
     //@abi action
-    void uploadhash(account_name seller, account_name owner, uint64_t dealid, string datahash);
+    void uploadhash(account_name seller, uint64_t dealid, string datahash);
     //@abi action
     void deposit( account_name from, asset& quantity );
     //@abi action
@@ -104,12 +104,14 @@ private:
     struct deal {
         uint64_t dealid;
         uint64_t orderid;
+        account_name marketowner;
         account_name buyer;
         uint64_t orderstate;
         string datahash;
+        asset price;
 
         uint64_t primary_key() const { return dealid; }
-        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(buyer)(orderstate)(datahash))
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketowner)(buyer)(orderstate)(datahash)(price))
     }; 
     multi_index< N(deals), deal> _deals;
 
@@ -155,4 +157,4 @@ private:
 
     multi_index< N(accounts), account> _accounts;
 };
-EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey))
+EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey))

@@ -65,9 +65,9 @@ cleos get table dex dex deals
 
 # 6.seller upload datahash(calling uploadhash)
 echo "STEP 6: send datahash"
-cleos push action dex uploadhash '[ "seller1", "datasource1", 1, "asdf" ]' -p seller1
-cleos push action dex uploadhash '[ "seller2", "datasource1", 2, "asdfasf" ]' -p seller2
-cleos push action dex uploadhash '[ "seller3", "datasource1", 3, "asdfasf" ]' -p seller3
+cleos push action dex uploadhash '[ "seller1", 1, "asdf" ]' -p seller1
+cleos push action dex uploadhash '[ "seller2", 2, "asdfasf" ]' -p seller2
+cleos push action dex uploadhash '[ "seller3", 3, "asdfasf" ]' -p seller3
 cleos get table dex dex accounts
 cleos get table dex dex deals
 
