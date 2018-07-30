@@ -96,6 +96,8 @@ void dataexchange::resumemkt(account_name owner, uint64_t marketid){
 void dataexchange::createorder(account_name seller, uint64_t marketid, asset& price) {
     require_auth(seller);
 
+    eosio_assert( price.is_valid(), "invalid price" );
+    eosio_assert( price.amount > 0, "price must be positive price" );
     eosio_assert(hasmareket_byid(marketid) == true, "no such market");
 
     auto iditem = _availableid.get();
@@ -295,7 +297,7 @@ void dataexchange::deposit(account_name from, asset& quantity ) {
    });
 
    //make sure contract xingyitoken have been deployed to blockchain to make it runnable
-   //xingyitoken is our own token, its symblo is SYS
+   //xingyitoken is our own token, its symbol is SYS
    action(
       permission_level{ from, N(active) },
       N(xingyitoken), N(transfer),
