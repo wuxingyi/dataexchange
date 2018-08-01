@@ -106,12 +106,12 @@ private:
                 indexed_by< N(mowner), const_mem_fun<datamarket, uint64_t, &datamarket::by_mowner> >
     > _markets;
 
-    static const uint64_t orderstate_start = 0;
-    static const uint64_t orderstate_waitingauthorize = 1;
-    static const uint64_t orderstate_waitinghash = 2;
-    static const uint64_t orderstate_finished = 3;
-    static const uint64_t orderstate_canceled = 4;
-    static const uint64_t orderstate_end = 5;
+    static const uint64_t dealstate_start = 0;
+    static const uint64_t dealstate_waitingauthorize = 1;
+    static const uint64_t dealstate_waitinghash = 2;
+    static const uint64_t dealstate_finished = 3;
+    static const uint64_t dealstate_canceled = 4;
+    static const uint64_t dealstate_end = 5;
 
     //@abi table deals i64
     struct deal {
@@ -120,12 +120,12 @@ private:
         account_name marketowner;
         account_name buyer;
         account_name seller;
-        uint64_t orderstate;
+        uint64_t dealstate;
         string datahash;
         asset price;
 
         uint64_t primary_key() const { return dealid; }
-        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketowner)(buyer)(seller)(orderstate)(datahash)(price))
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketowner)(buyer)(seller)(dealstate)(datahash)(price))
     }; 
     multi_index< N(deals), deal> _deals;
 

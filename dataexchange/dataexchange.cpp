@@ -170,7 +170,7 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
 
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
-    eosio_assert(dealiter->orderstate == orderstate_waitinghash || dealiter->orderstate == orderstate_waitingauthorize, "order state is not orderstate_waitinghash");
+    eosio_assert(dealiter->dealstate == dealstate_waitinghash || dealiter->dealstate == dealstate_waitingauthorize, "deal state is not dealstate_waitinghash");
     eosio_assert(dealiter->buyer == buyer, "not belong to this buyer");
     _deals.erase(dealiter);
 
@@ -185,7 +185,7 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
 void dataexchange::erasedeal(uint64_t dealid) {
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
-    eosio_assert(dealiter->orderstate == orderstate_finished, "order state is not orderstate_waitinghash");
+    eosio_assert(dealiter->dealstate == dealstate_finished, "deal state is not dealstate_waitinghash");
     _deals.erase(dealiter);
 }
 
@@ -217,7 +217,7 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
         deal.marketowner = owner;
         deal.orderid = orderid;
         deal.datahash = "";
-        deal.orderstate = orderstate_waitingauthorize;
+        deal.dealstate = dealstate_waitingauthorize;
         deal.buyer = buyer;
         deal.seller = iter->seller;
         deal.price = iter->price;
@@ -229,10 +229,10 @@ void dataexchange::authorize(account_name seller, uint64_t dealid) {
 
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
-    eosio_assert(dealiter->orderstate == orderstate_waitingauthorize, "order state is not orderstate_waitingauthorize");
+    eosio_assert(dealiter->dealstate == dealstate_waitingauthorize, "deal state is not dealstate_waitingauthorize");
     eosio_assert(dealiter->seller == seller, "this deal doesnot belong to you");
     _deals.modify( dealiter, 0, [&]( auto& deal) {
-       deal.orderstate = orderstate_waitinghash;
+       deal.dealstate = dealstate_waitinghash;
     });
 }
 
@@ -244,11 +244,11 @@ void dataexchange::uploadhash(account_name marketowner, uint64_t dealid, string 
 
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
-    eosio_assert(dealiter->orderstate == orderstate_waitinghash, "order state is not orderstate_waitinghash");
+    eosio_assert(dealiter->dealstate == dealstate_waitinghash, "deal state is not dealstate_waitinghash");
     eosio_assert(dealiter->marketowner == marketowner, "not correct market owner");
     _deals.modify( dealiter, 0, [&]( auto& deal) {
        deal.datahash = datahash;
-       deal.orderstate = orderstate_finished;
+       deal.dealstate = dealstate_finished;
     });
 
     // add token to seller's account
