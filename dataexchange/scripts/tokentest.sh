@@ -144,7 +144,7 @@ cleos push action dex withdraw '[ "seller2", "1.0000 SYS" ]' -p seller2
 cleos get table dex dex accounts
 
 #13.test market suspend、resume、remove
-echo "STEP 13: test market suspend and resume"
+echo "STEP 13: test market suspend, resume and remove"
 cleos push action dex createorder ' {"seller": "seller1", "marketid": 1, "price": "10.0000 SYS"} ' -p seller1
 cleos push action dex suspendmkt ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
 #should fail when creating order on a supsended market
