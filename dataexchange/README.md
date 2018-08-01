@@ -29,7 +29,7 @@ cleos push action dddd createorder '["eosio","bdibxtljzc", 0, 2,"jd.com"]' -p eo
 
 ## remove previously created order
 ```
-cleos push action dddd cancelorder '["eosio","bdibxtljzc",0]' -p eosio
+cleos push action dddd removeorder '["eosio","bdibxtljzc",0]' -p eosio
 ```
 ## list opening orders in a market
 ```

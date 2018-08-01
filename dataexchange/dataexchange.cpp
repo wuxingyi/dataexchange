@@ -2,6 +2,9 @@
 #include "base58.hpp"
 
 using namespace std;
+
+//remove an data market, can only be made by the market owner.
+//we can only remove a suspended market with enough suspend time to make the ongoing deals finished.
 void dataexchange::removemarket(account_name owner, uint64_t marketid){
     //only the market owner can create a market
     require_auth(owner);
@@ -9,14 +12,25 @@ void dataexchange::removemarket(account_name owner, uint64_t marketid){
     auto iter = _markets.find(marketid);
     eosio_assert(iter != _markets.end(), "market not have been created yet");
     eosio_assert(iter->mowner == owner , "have no permission to this market");
-    eosio_assert(hasorder_bymarketid(marketid) == false, "market can't be removed because it still has opening orders");
-    
+    eosio_assert(iter->issuspended == true, "only suspended market can be removed");
+    //eosio_assert(iter->minremovaltime != time_point_sec(0) && time_point_sec(now()) > iter->minremovaltime, "market should have enought suspend time before removal");
+    eosio_assert(time_point_sec(now()) > iter->minremovaltime, "market should have enought suspend time before removal");
+
+    ordertable orders(_self, owner);
+    auto orderiter = orders.begin();
+    while(true) {
+        if (orderiter != orders.end()) {
+            orders.erase( orderiter++ );
+        } else {
+            break;
+        }
+    }
+
     _markets.erase(iter);
 }
 
-
+//create an new data market, only the contract owner can create a market.
 void dataexchange::createmarket(account_name owner, uint64_t type, string desp){
-    //only the contract owner can create a market
     require_auth(_self);
 
     eosio_assert(desp.length() < 30, "market description should be less than 30 characters");
@@ -37,9 +51,12 @@ void dataexchange::createmarket(account_name owner, uint64_t type, string desp){
         row.mowner = owner;
         row.mtype = type;
         row.mdesp = desp;
+        row.minremovaltime = time_point_sec(0);
+        row.issuspended = false;
     });
 }
 
+//suspend an market so no more orders can be made, this abi is for market management concern.
 void dataexchange::suspendmkt(account_name owner, uint64_t marketid){
     //only the market owner can suspend a market
     require_auth(owner);
@@ -63,9 +80,11 @@ void dataexchange::suspendmkt(account_name owner, uint64_t marketid){
     }
     _markets.modify( iter, 0, [&]( auto& mkt) {
        mkt.issuspended = true;
+       mkt.minremovaltime = time_point_sec(now() + market_min_suspendtoremoveal_interval);
     });
 }
 
+//resume a suspended data market.
 void dataexchange::resumemkt(account_name owner, uint64_t marketid){
     //only the market owner can resume a market
     require_auth(owner);
@@ -89,10 +108,11 @@ void dataexchange::resumemkt(account_name owner, uint64_t marketid){
     }
     _markets.modify( iter, 0, [&]( auto& mkt) {
        mkt.issuspended = false;
+       mkt.minremovaltime = time_point_sec(0);
     });
 }
 
-
+// create an order in a market, deals can be made under this order.
 void dataexchange::createorder(account_name seller, uint64_t marketid, asset& price) {
     require_auth(seller);
 
@@ -126,6 +146,7 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
    }
 }
 
+//suspend an order so buyers can not make deals in this order.
 void dataexchange::suspendorder(account_name seller, account_name owner, uint64_t orderid) {
     require_auth(seller);
 
@@ -140,6 +161,7 @@ void dataexchange::suspendorder(account_name seller, account_name owner, uint64_
     });
 }
 
+//resume an suspended order.
 void dataexchange::resumeorder(account_name seller, account_name owner, uint64_t orderid) {
     require_auth(seller);
 
@@ -154,7 +176,8 @@ void dataexchange::resumeorder(account_name seller, account_name owner, uint64_t
     });
 }
 
-void dataexchange::cancelorder(account_name seller, account_name owner, uint64_t orderid) {
+//remove an order from data source so no more new deals can be made any more, but ongoing deal still can be finished.
+void dataexchange::removeorder(account_name seller, account_name owner, uint64_t orderid) {
     require_auth(seller);
 
     ordertable orders(_self, owner);
@@ -165,6 +188,7 @@ void dataexchange::cancelorder(account_name seller, account_name owner, uint64_t
     orders.erase(iter);
 }
 
+//cancel an ongoing deal from buyer side, the deal should be in state dealstate_waitinghash or dealstate_waitingauthorize.
 void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t dealid) {
     require_auth(buyer);
 
@@ -182,6 +206,7 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
     });
 }
 
+//erase deal from ledger to free the memory usage.
 void dataexchange::erasedeal(uint64_t dealid) {
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
@@ -190,6 +215,7 @@ void dataexchange::erasedeal(uint64_t dealid) {
 }
 
 //owner is the market owner, not the seller, seller is stored in struct order.
+//market owner must be provided because all orders are stored in market owner's scope, see code: ordertable orders(_self, owner);
 void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t orderid) {
     require_auth(buyer);
 
@@ -224,6 +250,7 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
     });
 }
 
+//seller authorize a deal, all deals are stored in contract owner's scope.
 void dataexchange::authorize(account_name seller, uint64_t dealid) {
     require_auth(seller);
 
@@ -279,6 +306,7 @@ void dataexchange::uploadhash(account_name marketowner, uint64_t dealid, string 
     });
 }
 
+//deposit token to contract, all token will transfer to contract owner.
 void dataexchange::deposit(account_name from, asset& quantity ) {
    require_auth( from);
    
@@ -305,6 +333,7 @@ void dataexchange::deposit(account_name from, asset& quantity ) {
    ).send();
 }
 
+//withdraw token from contract owner, token equals to quantity will transfer to owner.
 void dataexchange::withdraw(account_name owner, asset& quantity ) {
    require_auth( owner );
 
@@ -333,6 +362,7 @@ void dataexchange::withdraw(account_name owner, asset& quantity ) {
    }
 }
 
+//register public key to ledger, the data source can encrypt data by this public key.
 void dataexchange::regpkey(account_name owner, string pkey) {
    require_auth( owner );
 
@@ -373,6 +403,7 @@ void dataexchange::regpkey(account_name owner, string pkey) {
    });
 }
 
+//deregister public key, aka remove from ledger.
 void dataexchange::deregpkey(account_name owner) {
    require_auth( owner );
 
@@ -387,4 +418,3 @@ void dataexchange::deregpkey(account_name owner) {
          _accounts.erase(itr);
    }
 }
-

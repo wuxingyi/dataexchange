@@ -2,6 +2,7 @@
 #include <eosiolib/print.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/crypto.h>
+#include <eosiolib/time.hpp>
 #include<eosiolib/singleton.hpp>
 #include <cstring>
 
@@ -28,7 +29,7 @@ public:
     //@abi action
     void createorder(account_name seller, uint64_t marketid, asset& price);
     //@abi action
-    void cancelorder(account_name seller, account_name owner, uint64_t orderid);
+    void removeorder(account_name seller, account_name owner, uint64_t orderid);
     //@abi action
     void canceldeal(account_name buyer, account_name owner, uint64_t orderid);
     //@abi action
@@ -64,6 +65,9 @@ private:
     static const uint64_t sellouts = 4;        
     static const uint64_t typeend = 5;
 
+
+    static const uint64_t market_min_suspendtoremoveal_interval = 5;
+
     struct availableid {
         uint64_t availmarketid; 
         uint64_t availorderid; 
@@ -82,11 +86,12 @@ private:
         string mdesp;
         account_name mowner;
         bool issuspended;
+        time_point_sec minremovaltime;
 
         uint64_t primary_key() const { return marketid; }
         uint64_t by_mtype() const { return mtype; }
         uint64_t by_mowner() const { return mowner; }
-        EOSLIB_SERIALIZE( datamarket, (marketid)(mtype)(mdesp)(mowner)(issuspended))
+        EOSLIB_SERIALIZE( datamarket, (marketid)(mtype)(mdesp)(mowner)(issuspended)(minremovaltime))
     };
 
     bool hasmareket_byid(uint64_t id)const {
@@ -172,6 +177,6 @@ private:
 
     multi_index< N(accounts), account> _accounts;
 };
-EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(cancelorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)
+EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(removeorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)
            (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)
          )

@@ -143,7 +143,7 @@ cleos push action dex withdraw '[ "seller1", "1.0000 SYS" ]' -p seller1
 cleos push action dex withdraw '[ "seller2", "1.0000 SYS" ]' -p seller2
 cleos get table dex dex accounts
 
-#13.test market suspend and resume
+#13.test market suspend、resume、remove
 echo "STEP 13: test market suspend and resume"
 cleos push action dex createorder ' {"seller": "seller1", "marketid": 1, "price": "10.0000 SYS"} ' -p seller1
 cleos push action dex suspendmkt ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
@@ -152,3 +152,9 @@ cleos push action dex createorder ' {"seller": "seller1", "marketid": 1, "price"
 cleos push action dex resumemkt ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
 #should suscess
 cleos push action dex createorder ' {"seller": "seller1", "marketid": 1, "price": "10.0000 SYS"} ' -p seller1
+cleos push action dex suspendmkt ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
+cleos push action dex suspendmkt ' {"owner": "datasource1", "marketid": 0} ' -p datasource1
+sleep 6
+cleos push action dex removemarket ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
+cleos push action dex removemarket ' {"owner": "datasource1", "marketid": 0} ' -p datasource1
+cleos get table dex  dex datamarkets -l -1
