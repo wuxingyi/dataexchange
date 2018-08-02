@@ -185,11 +185,12 @@ private:
        asset        asset_balance;
        string       pkey;
        uint64_t     finished_deals;
+       uint64_t     outgoingbuy_deals;
        uint64_t     expired_deals;
 
        uint64_t primary_key()const { return owner; }
 
-       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey)(finished_deals)(expired_deals))
+       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey)(finished_deals)(outgoingbuy_deals)(expired_deals))
     };
 
     multi_index< N(accounts), account> _accounts;

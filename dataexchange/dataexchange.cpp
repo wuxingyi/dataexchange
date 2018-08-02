@@ -245,6 +245,7 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
     eosio_assert(buyeritr != _accounts.end() , "buyer should have have account");
     _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
        acnt.asset_balance += dealiter->price;
+       acnt.outgoingbuy_deals--;
     });
 
     _markets.modify( mktiter, 0, [&]( auto& mkt) {
@@ -279,6 +280,7 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
     _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
        eosio_assert(acnt.asset_balance >= iter->price , "buyer should have enough token");
        acnt.asset_balance -= iter->price;
+       acnt.outgoingbuy_deals++;
     });
 
     auto iditem = _availableid.get();
@@ -364,6 +366,13 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
     _markets.modify( mktiter, 0, [&]( auto& mkt) {
         mkt.mstats.ongoingdeals_nr--;
         mkt.mstats.finisheddeals_nr++;
+    });
+
+    // modify buyers finished order data
+    auto buyeriter = _accounts.find(dealiter->buyer);
+    _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
+       acnt.outgoingbuy_deals--;
+       acnt.finished_deals++;
     });
 }
 
@@ -466,16 +475,17 @@ void dataexchange::regpkey(account_name owner, string pkey) {
 
 //deregister public key, aka remove from ledger.
 void dataexchange::deregpkey(account_name owner) {
-   require_auth( owner );
+    require_auth( owner );
 
-   auto itr = _accounts.find( owner );
-   eosio_assert(itr != _accounts.end(), "account not registered yet");
+    auto itr = _accounts.find( owner );
+    eosio_assert(itr != _accounts.end(), "account not registered yet");
 
-   if (itr->asset_balance.amount > 0) {
-       _accounts.modify( itr, 0, [&]( auto& acnt ) {
-          acnt.pkey = "";
-       });
-   } else {
-         _accounts.erase(itr);
-   }
+    //reducer uncessary account erasal
+    if (itr->asset_balance.amount > 0 || itr->finished_deals > 0 || itr->outgoingbuy_deals > 0) {
+        _accounts.modify( itr, 0, [&]( auto& acnt ) {
+           acnt.pkey = "";
+        });
+    } else {
+          _accounts.erase(itr);
+    }
 }
