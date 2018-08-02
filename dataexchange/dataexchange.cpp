@@ -5,15 +5,15 @@ using namespace std;
 
 //remove an data market, can only be made by the market owner.
 //we can only remove a suspended market with enough suspend time to make the ongoing deals finished.
+//removed market will not be removed from the market table because this table will not be to big.
+//we kept the removed market alive because it can show some statistics about data trading.
 void dataexchange::removemarket(account_name owner, uint64_t marketid){
-    //only the market owner can create a market
     require_auth(owner);
 
     auto iter = _markets.find(marketid);
     eosio_assert(iter != _markets.end(), "market not have been created yet");
     eosio_assert(iter->mowner == owner , "have no permission to this market");
     eosio_assert(iter->issuspended == true, "only suspended market can be removed");
-    //eosio_assert(iter->minremovaltime != time_point_sec(0) && time_point_sec(now()) > iter->minremovaltime, "market should have enought suspend time before removal");
     eosio_assert(time_point_sec(now()) > iter->minremovaltime, "market should have enought suspend time before removal");
 
     ordertable orders(_self, owner);
@@ -36,6 +36,7 @@ void dataexchange::removemarket(account_name owner, uint64_t marketid){
 }
 
 //create an new data market, only the contract owner can create a market.
+//a datasource can have ONLY ONE living data market, but can have lots of removed markets.
 void dataexchange::createmarket(account_name owner, uint64_t type, string desp){
     require_auth(_self);
 
