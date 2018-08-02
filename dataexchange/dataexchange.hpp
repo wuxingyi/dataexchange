@@ -37,7 +37,7 @@ public:
     //@abi action
     void makedeal(account_name buyer, account_name owner, uint64_t orderid);
     //@abi action
-    void uploadhash(account_name seller, uint64_t dealid, string datahash);
+    void uploadhash(uint64_t marketid, uint64_t dealid, string datahash);
     //@abi action
     void deposit( account_name from, asset& quantity );
     //@abi action
@@ -79,6 +79,16 @@ private:
 
     singleton<N(availableid), availableid> _availableid;
 
+    struct marketstats {
+        //nr means number
+        uint64_t totalaskingorders_nr;
+        uint64_t suspendedorders_nr;
+        uint64_t finisheddeals_nr;
+        uint64_t ongoingdeals_nr;
+        EOSLIB_SERIALIZE( marketstats, (totalaskingorders_nr)(suspendedorders_nr)(finisheddeals_nr)(ongoingdeals_nr))
+    };
+
+
     //@abi table datamarkets i64
     struct datamarket {
         uint64_t marketid; 
@@ -86,12 +96,14 @@ private:
         string mdesp;
         account_name mowner;
         bool issuspended;
+        bool isremoved;
         time_point_sec minremovaltime;
+        marketstats mstats;
 
         uint64_t primary_key() const { return marketid; }
         uint64_t by_mtype() const { return mtype; }
         uint64_t by_mowner() const { return mowner; }
-        EOSLIB_SERIALIZE( datamarket, (marketid)(mtype)(mdesp)(mowner)(issuspended)(minremovaltime))
+        EOSLIB_SERIALIZE( datamarket, (marketid)(mtype)(mdesp)(mowner)(issuspended)(isremoved)(minremovaltime)(mstats))
     };
 
     bool hasmareket_byid(uint64_t id)const {
@@ -100,10 +112,11 @@ private:
        return true;
     }
 
-    bool hasmarket_byaccountname( account_name accnt)const {
+    bool cancreate( account_name accnt)const {
        auto idx = _markets.template get_index<N(mowner)>();
        auto itr = idx.find(accnt);
-       return itr != idx.end();
+       if (itr == idx.end()) return true;
+       return itr->isremoved;
     }
 
     multi_index <N(datamarkets), datamarket, 
@@ -116,12 +129,14 @@ private:
     static const uint64_t dealstate_waitinghash = 2;
     static const uint64_t dealstate_finished = 3;
     static const uint64_t dealstate_canceled = 4;
-    static const uint64_t dealstate_end = 5;
+    static const uint64_t dealstate_expired = 5;
+    static const uint64_t dealstate_end = 6;
 
     //@abi table deals i64
     struct deal {
         uint64_t dealid;
         uint64_t orderid;
+        uint64_t marketid;
         account_name marketowner;
         account_name buyer;
         account_name seller;
@@ -130,7 +145,7 @@ private:
         asset price;
 
         uint64_t primary_key() const { return dealid; }
-        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketowner)(buyer)(seller)(dealstate)(datahash)(price))
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(buyer)(seller)(dealstate)(datahash)(price))
     }; 
     multi_index< N(deals), deal> _deals;
 
@@ -148,10 +163,10 @@ private:
         EOSLIB_SERIALIZE( askingorder, (orderid)(marketid)(seller)(price)(issuspended))
     };
 
-    bool hasorder_bymarketid( account_name id)const {
-       ordertable orders(_self, id); 
-       auto idx = orders.template get_index<N(marketid)>();
-       auto itr = idx.find(id);
+    bool hasorder_byseller( account_name owner, account_name seller)const {
+       ordertable orders(_self, owner); 
+       auto idx = orders.template get_index<N(seller)>();
+       auto itr = idx.find(seller);
        return itr != idx.end();
     }
 
@@ -169,10 +184,12 @@ private:
        account_name owner;
        asset        asset_balance;
        string       pkey;
+       uint64_t     finished_deals;
+       uint64_t     expired_deals;
 
        uint64_t primary_key()const { return owner; }
 
-       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey))
+       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey)(finished_deals)(expired_deals))
     };
 
     multi_index< N(accounts), account> _accounts;

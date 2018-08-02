@@ -46,8 +46,8 @@ echo "STEP 3: create market"
 cleos push action dex createmarket ' {"owner": "datasource1", "desp": "datasource", "type": 2} ' -p dex
 cleos push action dex createmarket ' {"owner": "datasource2", "desp": "datasource", "type": 2} ' -p dex
 
-# 4.seller1 and seller2 both create asking order
-echo "STEP 4: seller1 and seller2 both create asking order"
+# 4.seller1,seller2,seller3 all create asking order
+echo "STEP 4: seller1 , seller2 , seller3 both create asking order"
 cleos push action dex createorder ' {"seller": "seller1", "marketid": 0, "price": "10.0000 SYS"} ' -p seller1
 cleos push action dex createorder ' {"seller": "seller2", "marketid": 0, "price": "20.0000 SYS"} ' -p seller2
 cleos push action dex createorder ' {"seller": "seller3", "marketid": 0, "price": "30.0000 SYS"} ' -p seller3
@@ -85,9 +85,9 @@ cleos get table dex dex deals
 
 # 6.seller upload datahash(calling uploadhash)
 echo "STEP 6: send datahash"
-cleos push action dex uploadhash '[ "datasource1", 1, "asdfasdf"]' -p datasource1
-cleos push action dex uploadhash '[ "datasource1", 2, "asdfasf" ]' -p datasource1
-cleos push action dex uploadhash '[ "datasource1", 3, "asdfasf" ]' -p datasource1
+cleos push action dex uploadhash '[ 0, 1, "asdfasdf"]' -p datasource1
+cleos push action dex uploadhash '[ 0, 2, "asdfasf" ]' -p datasource1
+cleos push action dex uploadhash '[ 0, 3, "asdfasf" ]' -p datasource1
 cleos get table dex dex accounts
 cleos get table dex dex deals
 
@@ -143,11 +143,12 @@ cleos push action dex withdraw '[ "seller1", "1.0000 SYS" ]' -p seller1
 cleos push action dex withdraw '[ "seller2", "1.0000 SYS" ]' -p seller2
 cleos get table dex dex accounts
 
-#13.test market suspend、resume、remove
+13.test market suspend、resume、remove
 echo "STEP 13: test market suspend, resume and remove"
 cleos push action dex createorder ' {"seller": "seller1", "marketid": 1, "price": "10.0000 SYS"} ' -p seller1
 cleos push action dex suspendmkt ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
 #should fail when creating order on a supsended market
+cleos push action dex removeorder ' {"seller": "seller1", "owner":"datasource2", "orderid": 4} ' -p seller1
 cleos push action dex createorder ' {"seller": "seller1", "marketid": 1, "price": "10.0000 SYS"} ' -p seller1
 cleos push action dex resumemkt ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
 #should suscess
