@@ -232,7 +232,8 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
 
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
-    eosio_assert(dealiter->dealstate == dealstate_waitinghash || dealiter->dealstate == dealstate_waitingauthorize, "deal state is not dealstate_waitinghash");
+    eosio_assert(dealiter->dealstate == dealstate_waitinghash || dealiter->dealstate == dealstate_waitingauthorize || dealiter->dealstate == dealstate_expired,
+                 "deal state is not dealstate_waitinghash");
     eosio_assert(dealiter->buyer == buyer, "not belong to this buyer");
 
     auto mktiter = _markets.find(dealiter->marketid);
@@ -257,7 +258,19 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
 void dataexchange::erasedeal(uint64_t dealid) {
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
-    eosio_assert(dealiter->dealstate == dealstate_finished || dealiter->dealstate == dealstate_expired, "deal state is not dealstate_finished or dealstate_expired");
+    auto state = dealiter->dealstate;
+    if (dealiter->dealstate != dealstate_finished && dealiter->expiretime < time_point_sec(now())) {
+        state = dealstate_expired;
+    }
+
+    eosio_assert(dealiter->dealstate == dealstate_finished || state == dealstate_expired, "deal state is not dealstate_finished or dealstate_expired");
+
+    if (state == dealstate_expired) {
+        auto buyeritr = _accounts.find(dealiter->buyer);
+        _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
+           acnt.expired_deals++;
+        });
+    }
     _deals.erase(dealiter);
 }
 
@@ -299,6 +312,7 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
         deal.buyer = buyer;
         deal.seller = iter->seller;
         deal.price = iter->price;
+        deal.expiretime = time_point_sec(now() + deal_expire_interval);
     });
 
     _markets.modify( mktiter, 0, [&]( auto& mkt) {
@@ -314,6 +328,7 @@ void dataexchange::authorize(account_name seller, uint64_t dealid) {
     eosio_assert(dealiter != _deals.end() , "no such deal");
     eosio_assert(dealiter->dealstate == dealstate_waitingauthorize, "deal state is not dealstate_waitingauthorize");
     eosio_assert(dealiter->seller == seller, "this deal doesnot belong to you");
+    eosio_assert(dealiter->expiretime > time_point_sec(now()), "this deal has been expired");
     _deals.modify( dealiter, 0, [&]( auto& deal) {
        deal.dealstate = dealstate_waitinghash;
     });
@@ -327,6 +342,7 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
     eosio_assert(dealiter != _deals.end() , "no such deal");
     eosio_assert(dealiter->dealstate == dealstate_waitinghash, "deal state is not dealstate_waitinghash");
     eosio_assert(dealiter->marketid == marketid, "not correct marketid");
+    eosio_assert(dealiter->expiretime > time_point_sec(now()), "this deal has been expired");
 
     auto mktiter = _markets.find(dealiter->marketid);
     eosio_assert(mktiter != _markets.end(), "no such market");
