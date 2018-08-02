@@ -269,6 +269,7 @@ void dataexchange::erasedeal(uint64_t dealid) {
         auto buyeritr = _accounts.find(dealiter->buyer);
         _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
            acnt.expired_deals++;
+           acnt.outgoingbuy_deals--;
         });
     }
     _deals.erase(dealiter);
