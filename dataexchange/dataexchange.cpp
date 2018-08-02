@@ -16,7 +16,7 @@ void dataexchange::removemarket(account_name owner, uint64_t marketid){
     eosio_assert(iter->issuspended == true, "only suspended market can be removed");
     eosio_assert(time_point_sec(now()) > iter->minremovaltime, "market should have enought suspend time before removal");
 
-    ordertable orders(_self, owner);
+    askingordertable orders(_self, owner);
     auto orderiter = orders.begin();
     auto removedorders = 0;
     while(true) {
@@ -73,7 +73,7 @@ void dataexchange::suspendmkt(account_name owner, uint64_t marketid){
     eosio_assert(iter->mowner == owner , "have no permission to this market");
     eosio_assert(iter->issuspended == false, "market should be work now");
 
-    ordertable orders(_self, owner);
+    askingordertable orders(_self, owner);
     auto suspendedorders = 0;
     auto orderiter = orders.begin();
     while(true) {
@@ -104,7 +104,7 @@ void dataexchange::resumemkt(account_name owner, uint64_t marketid){
     eosio_assert(iter->mowner == owner , "have no permission to this market");
     eosio_assert(iter->issuspended == true, "market should be suspened");
 
-    ordertable orders(_self, owner);
+    askingordertable orders(_self, owner);
     auto orderiter = orders.begin();
     auto resumedorders = 0;
     while(true) {
@@ -138,7 +138,7 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
     eosio_assert(miter->mowner != seller, "please don't sell on your own market");
     eosio_assert(miter->issuspended != true, "this market has already suspened, can't create orders");
 
-    ordertable orders(_self, miter->mowner); 
+    askingordertable orders(_self, miter->mowner); 
     eosio_assert( hasorder_byseller(miter->mowner, seller) != true, "one user can only create a single asking order");
 
     auto iditem = _availableid.get();
@@ -170,7 +170,7 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
 void dataexchange::suspendorder(account_name seller, account_name owner, uint64_t orderid) {
     require_auth(seller);
 
-    ordertable orders(_self, owner);
+    askingordertable orders(_self, owner);
     auto iter = orders.find(orderid);
 
     eosio_assert(iter != orders.end() , "no such order");
@@ -190,7 +190,7 @@ void dataexchange::suspendorder(account_name seller, account_name owner, uint64_
 void dataexchange::resumeorder(account_name seller, account_name owner, uint64_t orderid) {
     require_auth(seller);
 
-    ordertable orders(_self, owner);
+    askingordertable orders(_self, owner);
     auto iter = orders.find(orderid);
 
     eosio_assert(iter != orders.end() , "no such order");
@@ -209,7 +209,7 @@ void dataexchange::resumeorder(account_name seller, account_name owner, uint64_t
 void dataexchange::removeorder(account_name seller, account_name owner, uint64_t orderid) {
     require_auth(seller);
 
-    ordertable orders(_self, owner);
+    askingordertable orders(_self, owner);
     auto iter = orders.find(orderid);
 
     eosio_assert(iter != orders.end() , "no such order");
@@ -261,11 +261,11 @@ void dataexchange::erasedeal(uint64_t dealid) {
 }
 
 //owner is the market owner, not the seller, seller is stored in struct order.
-//market owner must be provided because all orders are stored in market owner's scope, see code: ordertable orders(_self, owner);
+//market owner must be provided because all orders are stored in market owner's scope, see code: askingordertable orders(_self, owner);
 void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t orderid) {
     require_auth(buyer);
 
-    ordertable orders(_self, owner);
+    askingordertable orders(_self, owner);
     auto iter = orders.find(orderid);
 
     eosio_assert(iter != orders.end() , "no such order");

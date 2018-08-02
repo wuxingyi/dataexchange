@@ -164,7 +164,7 @@ private:
     };
 
     bool hasorder_byseller( account_name owner, account_name seller)const {
-       ordertable orders(_self, owner); 
+       askingordertable orders(_self, owner); 
        auto idx = orders.template get_index<N(seller)>();
        auto itr = idx.find(seller);
        return itr != idx.end();
@@ -173,7 +173,7 @@ private:
     typedef multi_index <N(askingorders), askingorder ,
                  indexed_by< N(seller), const_mem_fun<askingorder, uint64_t, &askingorder::by_seller> >,
                  indexed_by< N(marketid), const_mem_fun<askingorder, uint64_t, &askingorder::by_marketid> >
-    > ordertable;
+    > askingordertable;
 
 
     //@abi table accounts i64
