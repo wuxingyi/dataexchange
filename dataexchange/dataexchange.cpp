@@ -245,9 +245,16 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
     auto buyeritr = _accounts.find(buyer);
     eosio_assert(buyeritr != _accounts.end() , "buyer should have have account");
     _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
-       acnt.asset_balance += dealiter->price;
-       acnt.outgoingbuy_deals--;
+        acnt.asset_balance += dealiter->price;
+        acnt.outgoingbuy_deals--;
     });
+
+    auto selleritr = _accounts.find(dealiter->seller);
+    eosio_assert(selleritr != _accounts.end() , "seller should have have account");
+    _accounts.modify( selleritr , 0, [&]( auto& acnt ) {
+        acnt.outgoingsell_deals--;
+    });
+
 
     _markets.modify( mktiter, 0, [&]( auto& mkt) {
         mkt.mstats.ongoingdeals_nr--;
@@ -271,6 +278,11 @@ void dataexchange::erasedeal(uint64_t dealid) {
            acnt.expired_deals++;
            acnt.outgoingbuy_deals--;
         });
+        auto selleritr = _accounts.find(dealiter->seller);
+        _accounts.modify( selleritr, 0, [&]( auto& acnt ) {
+           acnt.expired_deals++;
+           acnt.outgoingsell_deals--;
+        });
     }
     _deals.erase(dealiter);
 }
@@ -290,12 +302,25 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
 
     // buyer costs tokens
     auto buyeritr = _accounts.find(buyer);
-    eosio_assert(buyeritr != _accounts.end() , "buyer should have deposit token");
+    eosio_assert(buyeritr != _accounts.end() , "buyer account should exists");
     _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
        eosio_assert(acnt.asset_balance >= iter->price , "buyer should have enough token");
        acnt.asset_balance -= iter->price;
        acnt.outgoingbuy_deals++;
     });
+
+    auto selleritr = _accounts.find(iter->seller);
+    //reg seller to accounts table 
+    if( selleritr == _accounts.end() ) {
+        _accounts.emplace(_self, [&](auto& acnt){
+            acnt.owner = iter->seller;
+            acnt.outgoingsell_deals++; 
+        });
+    } else {
+        _accounts.modify( selleritr, 0, [&]( auto& acnt ) {
+            acnt.outgoingsell_deals++;
+        });
+    }
 
     auto iditem = _availableid.get();
     auto newid = ++iditem.availdealid;
@@ -367,6 +392,8 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
 
     _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
        acnt.asset_balance += sellertoken;
+       acnt.finished_deals++;
+       acnt.outgoingsell_deals--;
     });
 
     // add token to data source account
@@ -444,7 +471,8 @@ void dataexchange::withdraw(account_name owner, asset& quantity ) {
    ).send();
 
    // erase account when no more fund to free memory 
-   if( itr->asset_balance.amount == 0 && itr->pkey.length() == 0) {
+   if( itr->asset_balance.amount == 0 && itr->pkey.length() == 0 && 
+       itr->finished_deals == 0 && itr->outgoingbuy_deals == 0 && itr->outgoingsell_deals == 0) {
       _accounts.erase(itr);
    }
 }
@@ -498,7 +526,7 @@ void dataexchange::deregpkey(account_name owner) {
     eosio_assert(itr != _accounts.end(), "account not registered yet");
 
     //reducer uncessary account erasal
-    if (itr->asset_balance.amount > 0 || itr->finished_deals > 0 || itr->outgoingbuy_deals > 0) {
+    if (itr->asset_balance.amount > 0 || itr->finished_deals > 0 || itr->outgoingbuy_deals > 0 || itr->outgoingsell_deals > 0) {
         _accounts.modify( itr, 0, [&]( auto& acnt ) {
            acnt.pkey = "";
         });

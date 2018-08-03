@@ -44,8 +44,8 @@ function step_2() {
 # 3.create market
 function step_3() {
     echo "STEP 3: create market"
-    cleos push action dex createmarket ' {"owner": "datasource1", "desp": "datasource", "type": 2} ' -p dex
-    cleos push action dex createmarket ' {"owner": "datasource2", "desp": "datasource", "type": 2} ' -p dex
+    cleos push action dex createmarket ' {"owner": "datasource1", "desp": "datasource1", "type": 2} ' -p dex
+    cleos push action dex createmarket ' {"owner": "datasource2", "desp": "datasource2", "type": 2} ' -p dex
 }
 
 # 4.seller1,seller2,seller3 all create asking order
@@ -84,8 +84,10 @@ function step_6() {
 function step_7() {
     echo "STEP 7: test suspendorder and resumeorder"
     cleos push action dex suspendorder '{"seller": "seller1", "owner":"datasource1", "orderid": 1} ' -p seller1
+    #should fail
     cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
     cleos push action dex resumeorder '{"seller": "seller1", "owner":"datasource1", "orderid": 1} ' -p seller1
+    #should success
     cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
     cleos get table dex datasource1 askingorders
     cleos get table dex dex accounts
@@ -183,9 +185,24 @@ function step_15() {
     sleep 6
     cleos push action dex removemarket ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
     cleos push action dex removemarket ' {"owner": "datasource1", "marketid": 0} ' -p datasource1
-    cleos get table dex  dex datamarkets -l -1
+    cleos get table dex dex datamarkets -l -1
 }
 
+# 16.test deal expiration
+function step_16() {
+    echo "STEP 16: test deal expireation"
+    cleos push action dex createmarket ' {"owner": "datasource1", "desp": "datasource1", "type": 1} ' -p dex
+    cleos push action dex createorder ' {"seller": "seller1", "marketid": 2, "price": "10.0000 SYS"} ' -p seller1
+    cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 6} ' -p buyer1
+
+    #wait for expireation
+    sleep 11
+    #should fail here because it's expired
+    cleos push action dex authorize ' {"seller": "seller1", "dealid": 6} ' -p seller1
+    #cleos push action dex erasedeal '[6]' -p seller1
+    cleos get table dex  dex datamarkets -l -1
+    cleos get table dex  dex accounts -l -1
+}
 if [[ $# -ne 1 ]]; then 
     echo "usage: ./tokentest.sh step_number"
     exit -1

@@ -67,7 +67,7 @@ private:
 
 
     static const uint64_t market_min_suspendtoremoveal_interval = 5;
-    static const uint64_t deal_expire_interval = 60;
+    static const uint64_t deal_expire_interval = 10;
 
     struct availableid {
         uint64_t availmarketid; 
@@ -188,11 +188,12 @@ private:
        string       pkey;
        uint64_t     finished_deals;
        uint64_t     outgoingbuy_deals;
+       uint64_t     outgoingsell_deals;
        uint64_t     expired_deals;
 
        uint64_t primary_key()const { return owner; }
 
-       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey)(finished_deals)(outgoingbuy_deals)(expired_deals))
+       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey)(finished_deals)(outgoingbuy_deals)(outgoingsell_deals)(expired_deals))
     };
 
     multi_index< N(accounts), account> _accounts;
