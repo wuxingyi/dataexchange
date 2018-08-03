@@ -199,7 +199,7 @@ function step_16() {
     sleep 11
     #should fail here because it's expired
     cleos push action dex authorize ' {"seller": "seller1", "dealid": 6} ' -p seller1
-    #cleos push action dex erasedeal '[6]' -p seller1
+    cleos push action dex erasedeal '[6]' -p seller1
     cleos get table dex  dex datamarkets -l -1
     cleos get table dex  dex accounts -l -1
 }
