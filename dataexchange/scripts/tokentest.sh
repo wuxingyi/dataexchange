@@ -51,9 +51,9 @@ function step_3() {
 # 4.seller1,seller2,seller3 all create asking order
 function step_4() {
     echo "STEP 4: seller1 , seller2 , seller3 both create asking order"
-    cleos push action dex createorder ' {"seller": "seller1", "marketid": 0, "price": "10.0000 SYS"} ' -p seller1
-    cleos push action dex createorder ' {"seller": "seller2", "marketid": 0, "price": "20.0000 SYS"} ' -p seller2
-    cleos push action dex createorder ' {"seller": "seller3", "marketid": 0, "price": "30.0000 SYS"} ' -p seller3
+    cleos push action dex createorder ' {"orderowner": "seller1", "ordertype": 1, "marketid": 0, "price": "10.0000 SYS"} ' -p seller1
+    cleos push action dex createorder ' {"orderowner": "seller2", "ordertype": 1, "marketid": 0, "price": "20.0000 SYS"} ' -p seller2
+    cleos push action dex createorder ' {"orderowner": "seller3", "ordertype": 1, "marketid": 0, "price": "30.0000 SYS"} ' -p seller3
     cleos get table dex datasource1 askingorders
 }
 
@@ -61,9 +61,9 @@ function step_4() {
 # 5 try make deals
 function step_5() {
     echo "STEP 5: make deal"
-    cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 1} ' -p buyer1
-    cleos push action dex makedeal ' {"buyer": "buyer1", "owner": "datasource1", "orderid": 2} ' -p buyer1
-    cleos push action dex makedeal ' {"buyer": "buyer2", "owner": "datasource1", "orderid": 3} ' -p buyer2
+    cleos push action dex makedeal ' {"taker": "buyer1", "marketowner": "datasource1", "orderid": 1} ' -p buyer1
+    cleos push action dex makedeal ' {"taker": "buyer1", "marketowner": "datasource1", "orderid": 2} ' -p buyer1
+    cleos push action dex makedeal ' {"taker": "buyer2", "marketowner": "datasource1", "orderid": 3} ' -p buyer2
     cleos get table dex datasource1 askingorders
     cleos get table dex dex accounts
     cleos get table dex dex deals
@@ -72,9 +72,9 @@ function step_5() {
 # 6 authorize the deal
 function step_6() {
     echo "STEP 6: authorize the deal deal"
-    cleos push action dex authorize ' {"seller": "seller1", "dealid": 1} ' -p seller1
-    cleos push action dex authorize ' {"seller": "seller2", "dealid": 2} ' -p seller2
-    cleos push action dex authorize ' {"seller": "seller3", "dealid": 3} ' -p seller3
+    cleos push action dex authorize ' {"maker": "seller1", "dealid": 1} ' -p seller1
+    cleos push action dex authorize ' {"maker": "seller2", "dealid": 2} ' -p seller2
+    cleos push action dex authorize ' {"maker": "seller3", "dealid": 3} ' -p seller3
     cleos get table dex datasource1 askingorders
     cleos get table dex dex accounts
     cleos get table dex dex deals
@@ -203,12 +203,12 @@ function step_16() {
     cleos get table dex  dex datamarkets -l -1
     cleos get table dex  dex accounts -l -1
 }
-if [[ $# -ne 1 ]]; then 
-    echo "usage: ./tokentest.sh step_number"
-    exit -1
-fi
+#if [[ $# -ne 1 ]]; then 
+#    echo "usage: ./tokentest.sh step_number"
+#    exit -1
+#fi
 
-for i in `seq 1 $1`
+for i in `seq $1 $1`
 do 
-    step_$i
+   step_$i
 done

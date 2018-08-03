@@ -27,15 +27,15 @@ public:
     //@abi action
     void createmarket(account_name owner, uint64_t type, string desp);
     //@abi action
-    void createorder(account_name seller, uint64_t marketid, asset& price);
+    void createorder(account_name orderowner, uint64_t ordertype, uint64_t marketid, asset& price);
     //@abi action
-    void removeorder(account_name seller, account_name owner, uint64_t orderid);
+    void removeorder(account_name orderowner, account_name marketowner, uint64_t orderid);
     //@abi action
     void canceldeal(account_name buyer, account_name owner, uint64_t orderid);
     //@abi action
     void erasedeal(uint64_t dealid);
     //@abi action
-    void makedeal(account_name buyer, account_name owner, uint64_t orderid);
+    void makedeal(account_name taker, account_name marketowner, uint64_t orderid);
     //@abi action
     void uploadhash(uint64_t marketid, uint64_t dealid, string datahash);
     //@abi action
@@ -47,9 +47,9 @@ public:
     //@abi action
     void deregpkey( account_name owner);
     //@abi action
-    void authorize(account_name seller, uint64_t dealid);
+    void authorize(account_name maker, uint64_t dealid);
     //@abi action
-    void suspendorder(account_name seller, account_name owner, uint64_t orderid);
+    void suspendorder(account_name orderowner, account_name marketowner, uint64_t orderid);
     //@abi action
     void resumeorder(account_name seller, account_name owner, uint64_t orderid);
     //@abi action
@@ -82,11 +82,11 @@ private:
 
     struct marketstats {
         //nr means number
-        uint64_t totalaskingorders_nr;
+        uint64_t totalopenorders_nr;
         uint64_t suspendedorders_nr;
         uint64_t finisheddeals_nr;
         uint64_t ongoingdeals_nr;
-        EOSLIB_SERIALIZE( marketstats, (totalaskingorders_nr)(suspendedorders_nr)(finisheddeals_nr)(ongoingdeals_nr))
+        EOSLIB_SERIALIZE( marketstats, (totalopenorders_nr)(suspendedorders_nr)(finisheddeals_nr)(ongoingdeals_nr))
     };
 
 
@@ -133,21 +133,27 @@ private:
     static const uint64_t dealstate_expired = 5;
     static const uint64_t dealstate_end = 6;
 
+    static const uint64_t ordertype_start = 0;
+    static const uint64_t ordertype_ask = 1;
+    static const uint64_t ordertype_bid = 2;
+    static const uint64_t ordertype_end = 3;
+
     //@abi table deals i64
     struct deal {
         uint64_t dealid;
         uint64_t orderid;
         uint64_t marketid;
         account_name marketowner;
-        account_name buyer;
-        account_name seller;
+        account_name maker;
+        account_name taker;
+        uint64_t ordertype;
         uint64_t dealstate;
         string datahash;
         asset price;
         time_point_sec expiretime;
 
         uint64_t primary_key() const { return dealid; }
-        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(buyer)(seller)(dealstate)(datahash)(price)(expiretime))
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(dealstate)(ordertype)(datahash)(price)(expiretime))
     }; 
     multi_index< N(deals), deal> _deals;
 
@@ -155,25 +161,26 @@ private:
     struct askingorder {
         uint64_t orderid;     //orderid is the primary key for quick erase of pening asking orders
         uint64_t marketid; 
-        account_name seller;
+        account_name orderowner;
+        uint64_t order_type; 
         asset price;
         bool issuspended; 
 
         uint64_t primary_key() const { return orderid; }
-        uint64_t by_seller() const { return seller; }
+        uint64_t by_orderowner() const { return orderowner; }
         uint64_t by_marketid() const { return marketid; }
-        EOSLIB_SERIALIZE( askingorder, (orderid)(marketid)(seller)(price)(issuspended))
+        EOSLIB_SERIALIZE( askingorder, (orderid)(marketid)(orderowner)(order_type)(price)(issuspended))
     };
 
-    bool hasorder_byseller( account_name owner, account_name seller)const {
-       askingordertable orders(_self, owner); 
-       auto idx = orders.template get_index<N(seller)>();
-       auto itr = idx.find(seller);
+    bool hasorder_byorderowner( account_name marketowner, account_name _orderowner)const {
+       askingordertable orders(_self, marketowner); 
+       auto idx = orders.template get_index<N(orderowner)>();
+       auto itr = idx.find(_orderowner);
        return itr != idx.end();
     }
 
     typedef multi_index <N(askingorders), askingorder ,
-                 indexed_by< N(seller), const_mem_fun<askingorder, uint64_t, &askingorder::by_seller> >,
+                 indexed_by< N(orderowner), const_mem_fun<askingorder, uint64_t, &askingorder::by_orderowner> >,
                  indexed_by< N(marketid), const_mem_fun<askingorder, uint64_t, &askingorder::by_marketid> >
     > askingordertable;
 

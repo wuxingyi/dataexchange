@@ -32,7 +32,7 @@ void dataexchange::removemarket(account_name owner, uint64_t marketid){
     _markets.modify( iter, 0, [&]( auto& mkt) {
         mkt.isremoved = true;
         mkt.mstats.suspendedorders_nr -= removedorders;
-        mkt.mstats.totalaskingorders_nr = 0;
+        mkt.mstats.totalopenorders_nr = 0;
     });
 }
 
@@ -127,56 +127,58 @@ void dataexchange::resumemkt(account_name owner, uint64_t marketid){
 }
 
 // create an order in a market, deals can be made under this order.
-void dataexchange::createorder(account_name seller, uint64_t marketid, asset& price) {
-    require_auth(seller);
+void dataexchange::createorder(account_name orderowner, uint64_t ordertype, uint64_t marketid, asset& price) {
+    require_auth(orderowner);
 
     eosio_assert( price.is_valid(), "invalid price" );
     eosio_assert( price.amount > 0, "price must be positive price" );
+    eosio_assert( ordertype < ordertype_end, "bad ordertype" );
 
     auto miter = _markets.find(marketid);
     eosio_assert(miter != _markets.end(), "market not have been created yet");
     eosio_assert(miter->isremoved != true, "market has already been removed");
-    eosio_assert(miter->mowner != seller, "please don't sell on your own market");
+    eosio_assert(miter->mowner != orderowner, "please don't trade on your own market");
     eosio_assert(miter->issuspended != true, "market has already suspened, can't create orders");
 
     askingordertable orders(_self, miter->mowner); 
-    eosio_assert( hasorder_byseller(miter->mowner, seller) != true, 
-                  "one user can only create a single asking order");
+    eosio_assert( hasorder_byorderowner(miter->mowner, orderowner) != true, 
+                  "one user can only create a single order");
 
     auto iditem = _availableid.get();
     auto newid = ++iditem.availorderid;
     _availableid.set(availableid(iditem.availmarketid, newid, iditem.availdealid), _self);
 
     // we can only put it to the contract owner scope
-    orders.emplace(seller, [&]( auto& order) {
+    orders.emplace(orderowner, [&]( auto& order) {
         order.orderid = newid;
-        order.seller = seller;
+        order.orderowner = orderowner;
+        order.order_type = ordertype;
         order.marketid = marketid;
         order.price = price;
     });
 
     //reg seller to accounts table 
-    auto itr = _accounts.find(seller);
+    auto itr = _accounts.find(orderowner);
     if( itr == _accounts.end() ) {
         itr = _accounts.emplace(_self, [&](auto& acnt){
-           acnt.owner = seller;
+           acnt.owner = orderowner;
         });
     }
 
     _markets.modify( miter, 0, [&]( auto& mkt) {
-        mkt.mstats.totalaskingorders_nr++;
+        mkt.mstats.totalopenorders_nr++;
     });
 }
 
 //suspend an order so buyers can not make deals in this order.
-void dataexchange::suspendorder(account_name seller, account_name owner, uint64_t orderid) {
-    require_auth(seller);
+void dataexchange::suspendorder(account_name orderowner, account_name marketowner, uint64_t orderid) {
+    require_auth(orderowner);
 
-    askingordertable orders(_self, owner);
+    askingordertable orders(_self, marketowner);
     auto iter = orders.find(orderid);
 
     eosio_assert(iter != orders.end() , "no such order");
-    eosio_assert(iter->seller == seller, "order doesn't belong to you");
+    eosio_assert(iter->orderowner == orderowner, "order doesn't belong to you");
     eosio_assert(iter->issuspended == false, "order should be work");
     orders.modify( iter, 0, [&]( auto& order) {
         order.issuspended = true;
@@ -189,14 +191,14 @@ void dataexchange::suspendorder(account_name seller, account_name owner, uint64_
 }
 
 //resume an suspended order.
-void dataexchange::resumeorder(account_name seller, account_name owner, uint64_t orderid) {
-    require_auth(seller);
+void dataexchange::resumeorder(account_name orderowner, account_name marketowner, uint64_t orderid) {
+    require_auth(orderowner);
 
-    askingordertable orders(_self, owner);
+    askingordertable orders(_self, marketowner);
     auto iter = orders.find(orderid);
 
     eosio_assert(iter != orders.end() , "no such order");
-    eosio_assert(iter->seller == seller, "order doesn't belong to you");
+    eosio_assert(iter->orderowner == orderowner, "order doesn't belong to you");
     eosio_assert(iter->issuspended == true, "order should be suspened");
     orders.modify( iter, 0, [&]( auto& order) {
         order.issuspended = false;
@@ -208,18 +210,18 @@ void dataexchange::resumeorder(account_name seller, account_name owner, uint64_t
 }
 
 //remove from data source so no new deals can be made, but ongoing deals still can be finished.
-void dataexchange::removeorder(account_name seller, account_name owner, uint64_t orderid) {
-    require_auth(seller);
+void dataexchange::removeorder(account_name orderowner, account_name marketowner, uint64_t orderid) {
+    require_auth(orderowner);
 
-    askingordertable orders(_self, owner);
+    askingordertable orders(_self, marketowner);
     auto iter = orders.find(orderid);
 
     eosio_assert(iter != orders.end() , "no such order");
-    eosio_assert(iter->seller == seller, "order doesn't belong to you");
+    eosio_assert(iter->orderowner == orderowner, "order doesn't belong to you");
 
     auto miter = _markets.find(iter->marketid);
     _markets.modify( miter, 0, [&]( auto& mkt) {
-        mkt.mstats.totalaskingorders_nr--;
+        mkt.mstats.totalopenorders_nr--;
         if (iter->issuspended) {
             mkt.mstats.suspendedorders_nr--;
         }
@@ -228,21 +230,30 @@ void dataexchange::removeorder(account_name seller, account_name owner, uint64_t
     orders.erase(iter);
 }
 
-//cancel an ongoing deal buyer side
-void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t dealid) {
-    require_auth(buyer);
+//cancel an ongoing deal both sides
+void dataexchange::canceldeal(account_name canceler, account_name owner, uint64_t dealid) {
+    require_auth(canceler);
 
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
     eosio_assert(dealiter->dealstate == dealstate_waitinghash || dealiter->dealstate == dealstate_waitingauthorize || 
                  dealiter->dealstate == dealstate_expired, 
                  "deal state is not dealstate_waitinghash");
-    eosio_assert(dealiter->buyer == buyer, "not belong to this buyer");
+    eosio_assert(dealiter->maker == canceler || dealiter->taker == canceler, "only maker or taker can cancel a deal");
 
     auto mktiter = _markets.find(dealiter->marketid);
     eosio_assert(mktiter != _markets.end(), "no such market");
 
     _deals.erase(dealiter);
+    account_name buyer, seller;
+    if (dealiter->ordertype == ordertype_ask) {
+        buyer = dealiter->taker;
+        seller = dealiter->maker;
+    } else if (dealiter->ordertype == ordertype_bid) {
+        buyer = dealiter->maker;
+        seller = dealiter->taker;
+    }
+
 
     // refund buyer's tokens
     auto buyeritr = _accounts.find(buyer);
@@ -252,7 +263,7 @@ void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t d
         acnt.outgoingbuy_deals--;
     });
 
-    auto selleritr = _accounts.find(dealiter->seller);
+    auto selleritr = _accounts.find(seller);
     eosio_assert(selleritr != _accounts.end() , "seller should have have account");
     _accounts.modify( selleritr , 0, [&]( auto& acnt ) {
         acnt.outgoingsell_deals--;
@@ -276,13 +287,22 @@ void dataexchange::erasedeal(uint64_t dealid) {
     eosio_assert(dealiter->dealstate == dealstate_finished || state == dealstate_expired, 
                  "deal state is not dealstate_finished or dealstate_expired");
 
+    account_name buyer, seller;
+    if (dealiter->ordertype == ordertype_ask) {
+        buyer = dealiter->taker;
+        seller = dealiter->maker;
+    } else if (dealiter->ordertype == ordertype_bid) {
+        buyer = dealiter->maker;
+        seller = dealiter->taker;
+    }
+
     if (state == dealstate_expired) {
-        auto buyeritr = _accounts.find(dealiter->buyer);
+        auto buyeritr = _accounts.find(buyer);
         _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
             acnt.expired_deals++;
             acnt.outgoingbuy_deals--;
         });
-        auto selleritr = _accounts.find(dealiter->seller);
+        auto selleritr = _accounts.find(seller);
         _accounts.modify( selleritr, 0, [&]( auto& acnt ) {
             acnt.expired_deals++;
             acnt.outgoingsell_deals--;
@@ -291,13 +311,13 @@ void dataexchange::erasedeal(uint64_t dealid) {
     _deals.erase(dealiter);
 }
 
-//owner is the market owner, not the seller, seller is stored in struct order.
-//market owner must be provided because all orders are stored in market owner's scope, 
-//see code: askingordertable orders(_self, owner);
-void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t orderid) {
-    require_auth(buyer);
+//owner is the market owner, market owner must be provided because all orders are stored in market owner's scope.
+//see code: askingordertable orders(_self, marketowner);
+//taker is the one who try to make a deal by taking an existing order.
+void dataexchange::makedeal(account_name taker, account_name marketowner, uint64_t orderid) {
+    require_auth(taker);
 
-    askingordertable orders(_self, owner);
+    askingordertable orders(_self, marketowner);
     auto iter = orders.find(orderid);
 
     eosio_assert(iter != orders.end() , "no such order");
@@ -305,43 +325,69 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
     auto mktiter = _markets.find(iter->marketid);
     eosio_assert(mktiter != _markets.end(), "no such market");
 
-    // buyer costs tokens
-    auto buyeritr = _accounts.find(buyer);
-    eosio_assert(buyeritr != _accounts.end() , "buyer account should exists");
-    _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
-        eosio_assert(acnt.asset_balance >= iter->price , "buyer should have enough token");
-        acnt.asset_balance -= iter->price;
-        acnt.outgoingbuy_deals++;
-    });
+    uint64_t otype = iter->order_type;
+    eosio_assert( otype < ordertype_end, "bad ordertype" );
 
-    auto selleritr = _accounts.find(iter->seller);
-    //reg seller to accounts table 
-    if( selleritr == _accounts.end() ) {
+    auto takeritr = _accounts.find(taker);
+    if( takeritr == _accounts.end() ) {
         _accounts.emplace(_self, [&](auto& acnt){
-            acnt.owner = iter->seller;
-            acnt.outgoingsell_deals++; 
+            acnt.owner = taker;
         });
-    } else {
-        _accounts.modify( selleritr, 0, [&]( auto& acnt ) {
+    }
+
+    //if order type is ask, then the taker is a buyer
+    if (otype == ordertype_ask) {
+        _accounts.modify( takeritr, 0, [&]( auto& acnt ) {
+            eosio_assert(acnt.asset_balance >= iter->price , "buyer should have enough token");
+
+            //deduct token from the buyer's account
+            acnt.asset_balance -= iter->price;
+            acnt.outgoingbuy_deals++;
+        });
+
+        //the orderowner is the seller
+        auto selleritr = _accounts.find(iter->orderowner);
+        //reg seller to accounts table 
+        if( selleritr == _accounts.end() ) {
+            _accounts.emplace(_self, [&](auto& acnt){
+                acnt.owner = iter->orderowner;
+                acnt.outgoingsell_deals++; 
+            });
+        } else {
+            _accounts.modify( selleritr, 0, [&]( auto& acnt ) {
+                acnt.outgoingsell_deals++;
+            });
+        }
+    } else if (otype == ordertype_bid) { // the taker is the data seller
+        auto buyeritr = _accounts.find(iter->orderowner);
+        eosio_assert(buyeritr != _accounts.end() , "buyer should have have account");
+        _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
+            //deduct token from the buyer's account
+            acnt.asset_balance -= iter->price;
+            acnt.outgoingbuy_deals++;
+        });        
+
+        _accounts.modify( takeritr, 0, [&]( auto& acnt ) {
             acnt.outgoingsell_deals++;
         });
     }
+
 
     auto iditem = _availableid.get();
     auto newid = ++iditem.availdealid;
     _availableid.set(availableid(iditem.availmarketid, iditem.availorderid, newid), _self);
 
-    //use self scope to make it simple for memory deleting.
-    //it's not good for the seller to erase such entry because the datahash may be ignored if the entry is erased too quickly.
+    //use self scope to make it simple for memory reclaiming.
     _deals.emplace(_self, [&](auto& deal) { 
         deal.dealid = newid;
-        deal.marketowner = owner;
+        deal.marketowner = marketowner;
         deal.orderid = orderid;
         deal.marketid = iter->marketid;
         deal.datahash = "";
         deal.dealstate = dealstate_waitingauthorize;
-        deal.buyer = buyer;
-        deal.seller = iter->seller;
+        deal.ordertype = otype;
+        deal.maker = iter->orderowner;
+        deal.taker = taker;
         deal.price = iter->price;
         deal.expiretime = time_point_sec(now() + deal_expire_interval);
     });
@@ -351,14 +397,14 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
     });
 }
 
-//seller authorize a deal, all deals are stored in contract owner's scope.
-void dataexchange::authorize(account_name seller, uint64_t dealid) {
-    require_auth(seller);
+//maker authorize a deal, all deals are stored in contract owner's scope.
+void dataexchange::authorize(account_name maker, uint64_t dealid) {
+    require_auth(maker);
 
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
     eosio_assert(dealiter->dealstate == dealstate_waitingauthorize, "deal state is not dealstate_waitingauthorize");
-    eosio_assert(dealiter->seller == seller, "this deal doesnot belong to you");
+    eosio_assert(dealiter->maker == maker, "this deal doesnot belong to you");
     eosio_assert(dealiter->expiretime > time_point_sec(now()), "this deal has been expired");
     _deals.modify( dealiter, 0, [&]( auto& deal) {
         deal.dealstate = dealstate_waitinghash;
@@ -377,6 +423,8 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
 
     auto mktiter = _markets.find(dealiter->marketid);
     eosio_assert(mktiter != _markets.end(), "no such market");
+
+    //this abi should only run by the market owner
     require_auth(mktiter->mowner);
 
     _deals.modify( dealiter, 0, [&]( auto& deal) {
@@ -384,44 +432,81 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
         deal.dealstate = dealstate_finished;
     });
 
-    // add token to seller's account
-    auto selleriter = _accounts.find(dealiter->seller);
-    if( selleriter == _accounts.end() ) {
-        selleriter = _accounts.emplace(_self, [&](auto& acnt){
-            acnt.owner = dealiter->seller;
+    if (dealiter->ordertype == ordertype_ask) {
+        // add token to seller's account
+        auto selleriter = _accounts.find(dealiter->maker);
+        if( selleriter == _accounts.end() ) {
+            selleriter = _accounts.emplace(_self, [&](auto& acnt){
+                acnt.owner = dealiter->maker;
+            });
+        }
+
+        auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
+        auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
+
+        _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
+            acnt.asset_balance += sellertoken;
+            acnt.finished_deals++;
+            acnt.outgoingsell_deals--;
+        });
+
+        // add token to data source account
+        auto sourceitr = _accounts.find(dealiter->marketowner);
+        if( sourceitr == _accounts.end() ) {
+            sourceitr = _accounts.emplace(_self, [&](auto& acnt){
+                acnt.owner = dealiter->marketowner;
+            });
+        }
+
+        _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
+            acnt.asset_balance += sourcetoken;
+        });    
+        // modify buyers finished order data
+        auto buyeriter = _accounts.find(dealiter->taker);
+        _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
+            acnt.outgoingbuy_deals--;
+            acnt.finished_deals++;
+        });
+    } else if (dealiter->ordertype == ordertype_bid) {
+        // add token to seller's account
+        auto selleriter = _accounts.find(dealiter->taker);
+        if( selleriter == _accounts.end() ) {
+            selleriter = _accounts.emplace(_self, [&](auto& acnt){
+                acnt.owner = dealiter->maker;
+            });
+        }
+
+        auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
+        auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
+
+        _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
+            acnt.asset_balance += sellertoken;
+            acnt.finished_deals++;
+            acnt.outgoingsell_deals--;
+        });
+
+        // add token to data source account
+        auto sourceitr = _accounts.find(dealiter->marketowner);
+        if( sourceitr == _accounts.end() ) {
+            sourceitr = _accounts.emplace(_self, [&](auto& acnt){
+                acnt.owner = dealiter->marketowner;
+            });
+        }
+
+        _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
+            acnt.asset_balance += sourcetoken;
+        });    
+        // modify buyers finished order data
+        auto buyeriter = _accounts.find(dealiter->maker);
+        _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
+            acnt.outgoingbuy_deals--;
+            acnt.finished_deals++;
         });
     }
 
-    auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
-    auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
-
-    _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
-        acnt.asset_balance += sellertoken;
-        acnt.finished_deals++;
-        acnt.outgoingsell_deals--;
-    });
-
-    // add token to data source account
-    auto sourceitr = _accounts.find(dealiter->marketowner);
-    if( sourceitr == _accounts.end() ) {
-        sourceitr = _accounts.emplace(_self, [&](auto& acnt){
-            acnt.owner = dealiter->marketowner;
-        });
-    }
-
-    _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
-        acnt.asset_balance += sourcetoken;
-    });
     _markets.modify( mktiter, 0, [&]( auto& mkt) {
         mkt.mstats.ongoingdeals_nr--;
         mkt.mstats.finisheddeals_nr++;
-    });
-
-    // modify buyers finished order data
-    auto buyeriter = _accounts.find(dealiter->buyer);
-    _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
-        acnt.outgoingbuy_deals--;
-        acnt.finished_deals++;
     });
 }
 
