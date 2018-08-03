@@ -14,7 +14,8 @@ void dataexchange::removemarket(account_name owner, uint64_t marketid){
     eosio_assert(iter != _markets.end(), "market not have been created yet");
     eosio_assert(iter->mowner == owner , "have no permission to this market");
     eosio_assert(iter->issuspended == true, "only suspended market can be removed");
-    eosio_assert(time_point_sec(now()) > iter->minremovaltime, "market should have enought suspend time before removal");
+    eosio_assert(time_point_sec(now()) > iter->minremovaltime, 
+                 "market should have enought suspend time before removal");
 
     askingordertable orders(_self, owner);
     auto orderiter = orders.begin();
@@ -136,10 +137,11 @@ void dataexchange::createorder(account_name seller, uint64_t marketid, asset& pr
     eosio_assert(miter != _markets.end(), "market not have been created yet");
     eosio_assert(miter->isremoved != true, "market has already been removed");
     eosio_assert(miter->mowner != seller, "please don't sell on your own market");
-    eosio_assert(miter->issuspended != true, "this market has already suspened, can't create orders");
+    eosio_assert(miter->issuspended != true, "market has already suspened, can't create orders");
 
     askingordertable orders(_self, miter->mowner); 
-    eosio_assert( hasorder_byseller(miter->mowner, seller) != true, "one user can only create a single asking order");
+    eosio_assert( hasorder_byseller(miter->mowner, seller) != true, 
+                  "one user can only create a single asking order");
 
     auto iditem = _availableid.get();
     auto newid = ++iditem.availorderid;
@@ -205,7 +207,7 @@ void dataexchange::resumeorder(account_name seller, account_name owner, uint64_t
     });
 }
 
-//remove an order from data source so no more new deals can be made any more, but ongoing deal still can be finished.
+//remove from data source so no new deals can be made, but ongoing deals still can be finished.
 void dataexchange::removeorder(account_name seller, account_name owner, uint64_t orderid) {
     require_auth(seller);
 
@@ -226,13 +228,14 @@ void dataexchange::removeorder(account_name seller, account_name owner, uint64_t
     orders.erase(iter);
 }
 
-//cancel an ongoing deal from buyer side, the deal should be in state dealstate_waitinghash or dealstate_waitingauthorize.
+//cancel an ongoing deal buyer side
 void dataexchange::canceldeal(account_name buyer, account_name owner, uint64_t dealid) {
     require_auth(buyer);
 
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
-    eosio_assert(dealiter->dealstate == dealstate_waitinghash || dealiter->dealstate == dealstate_waitingauthorize || dealiter->dealstate == dealstate_expired,
+    eosio_assert(dealiter->dealstate == dealstate_waitinghash || dealiter->dealstate == dealstate_waitingauthorize || 
+                 dealiter->dealstate == dealstate_expired, 
                  "deal state is not dealstate_waitinghash");
     eosio_assert(dealiter->buyer == buyer, "not belong to this buyer");
 
@@ -270,7 +273,8 @@ void dataexchange::erasedeal(uint64_t dealid) {
         state = dealstate_expired;
     }
 
-    eosio_assert(dealiter->dealstate == dealstate_finished || state == dealstate_expired, "deal state is not dealstate_finished or dealstate_expired");
+    eosio_assert(dealiter->dealstate == dealstate_finished || state == dealstate_expired, 
+                 "deal state is not dealstate_finished or dealstate_expired");
 
     if (state == dealstate_expired) {
         auto buyeritr = _accounts.find(dealiter->buyer);
@@ -288,7 +292,8 @@ void dataexchange::erasedeal(uint64_t dealid) {
 }
 
 //owner is the market owner, not the seller, seller is stored in struct order.
-//market owner must be provided because all orders are stored in market owner's scope, see code: askingordertable orders(_self, owner);
+//market owner must be provided because all orders are stored in market owner's scope, 
+//see code: askingordertable orders(_self, owner);
 void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t orderid) {
     require_auth(buyer);
 
@@ -327,7 +332,7 @@ void dataexchange::makedeal(account_name buyer, account_name owner, uint64_t ord
     _availableid.set(availableid(iditem.availmarketid, iditem.availorderid, newid), _self);
 
     //use self scope to make it simple for memory deleting.
-    //it's not good for the seller to erase such entry because he may not see the datahash if the entry is deleted by seller too quickly.
+    //it's not good for the seller to erase such entry because the datahash may be ignored if the entry is erased too quickly.
     _deals.emplace(_self, [&](auto& deal) { 
         deal.dealid = newid;
         deal.marketowner = owner;
