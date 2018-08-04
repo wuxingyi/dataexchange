@@ -158,9 +158,9 @@ private:
     }; 
     multi_index< N(deals), deal> _deals;
 
-    //@abi table askingorders i64
-    struct askingorder {
-        uint64_t orderid;     //orderid is the primary key for quick erase of pening asking orders
+    //@abi table marketorders i64
+    struct marketorder {
+        uint64_t orderid;     //orderid is the primary key for quick erase of pening orders
         uint64_t marketid; 
         account_name orderowner;
         uint64_t order_type; 
@@ -170,20 +170,20 @@ private:
         uint64_t primary_key() const { return orderid; }
         uint64_t by_orderowner() const { return orderowner; }
         uint64_t by_marketid() const { return marketid; }
-        EOSLIB_SERIALIZE( askingorder, (orderid)(marketid)(orderowner)(order_type)(price)(issuspended))
+        EOSLIB_SERIALIZE( marketorder, (orderid)(marketid)(orderowner)(order_type)(price)(issuspended))
     };
 
     bool hasorder_byorderowner( account_name marketowner, account_name _orderowner)const {
-       askingordertable orders(_self, marketowner); 
+       marketordertable orders(_self, marketowner); 
        auto idx = orders.template get_index<N(orderowner)>();
        auto itr = idx.find(_orderowner);
        return itr != idx.end();
     }
 
-    typedef multi_index <N(askingorders), askingorder ,
-                 indexed_by< N(orderowner), const_mem_fun<askingorder, uint64_t, &askingorder::by_orderowner> >,
-                 indexed_by< N(marketid), const_mem_fun<askingorder, uint64_t, &askingorder::by_marketid> >
-    > askingordertable;
+    typedef multi_index <N(marketorders), marketorder ,
+                 indexed_by< N(orderowner), const_mem_fun<marketorder, uint64_t, &marketorder::by_orderowner> >,
+                 indexed_by< N(marketid), const_mem_fun<marketorder, uint64_t, &marketorder::by_marketid> >
+    > marketordertable;
 
 
     //@abi table accounts i64

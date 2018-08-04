@@ -33,7 +33,7 @@ cleos push action dddd removeorder '["eosio","bdibxtljzc",0]' -p eosio
 ```
 ## list opening orders in a market
 ```
-➜  dataexchange git:(master) ✗ cleos get table dddd asdf askingorders -l -1
+➜  dataexchange git:(master) ✗ cleos get table dddd asdf marketorders -l -1
 {
   "rows": [{
       "orderid": 1,
