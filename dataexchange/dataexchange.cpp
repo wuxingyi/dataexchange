@@ -336,59 +336,43 @@ void dataexchange::makedeal(account_name taker, account_name marketowner, uint64
     uint64_t otype = iter->order_type;
     eosio_assert( otype < ordertype_end, "bad ordertype" );
 
-    //if order type is ask, then the taker is a buyer
+    account_name buyer, seller;
     if (otype == ordertype_ask) {
-        auto takeritr = _accounts.find(taker);
-        if( takeritr == _accounts.end() ) {
-            _accounts.emplace(_self, [&](auto& acnt){
-                acnt.owner = taker;
-            });
-        }
-
-        _accounts.modify( takeritr, 0, [&]( auto& acnt ) {
-            eosio_assert(acnt.asset_balance >= iter->price , "buyer should have enough token");
-
-            //deduct token from the buyer's account
-            acnt.asset_balance -= iter->price;
-            acnt.outgoingbuy_deals++;
-        });
-
-        //the orderowner is the seller
-        auto selleritr = _accounts.find(iter->orderowner);
-        //reg seller to accounts table 
-        if( selleritr == _accounts.end() ) {
-            _accounts.emplace(_self, [&](auto& acnt){
-                acnt.owner = iter->orderowner;
-                acnt.outgoingsell_deals++; 
-            });
-        } else {
-            _accounts.modify( selleritr, 0, [&]( auto& acnt ) {
-                acnt.outgoingsell_deals++;
-            });
-        }
-    } else if (otype == ordertype_bid) { // the taker is the data seller
-        auto buyeritr = _accounts.find(iter->orderowner);
-        eosio_assert(buyeritr != _accounts.end() , "buyer should have have account");
-        _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
-            //deduct token from the buyer's account
-            acnt.asset_balance -= iter->price;
-            acnt.outgoingbuy_deals++;
-        });        
-
-        //the take is a seller
-        auto takeritr = _accounts.find(taker);
-        if( takeritr == _accounts.end() ) {
-            _accounts.emplace(_self, [&](auto& acnt){
-                acnt.owner = taker;
-                acnt.outgoingsell_deals++;
-            });
-        } else {
-            _accounts.modify( takeritr, 0, [&]( auto& acnt ) {
-                acnt.outgoingsell_deals++;
-            });
-        }
+        buyer = taker;
+        seller = iter->orderowner;
+    } else if (otype == ordertype_bid) {
+        buyer = iter->orderowner;
+        seller = taker;
     }
 
+    //if order type is ask, then the taker is a buyer
+    auto buyeriter = _accounts.find(buyer);
+    if( buyeriter == _accounts.end() ) {
+        _accounts.emplace(_self, [&](auto& acnt){
+            acnt.owner = buyer;
+        });
+    }
+
+    _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
+        eosio_assert(acnt.asset_balance >= iter->price , "buyer should have enough token");
+
+        //deduct token from the buyer's account
+        acnt.asset_balance -= iter->price;
+        acnt.outgoingbuy_deals++;
+    });
+
+    auto selleritr = _accounts.find(seller);
+    //reg seller to accounts table 
+    if( selleritr == _accounts.end() ) {
+        _accounts.emplace(_self, [&](auto& acnt){
+            acnt.owner = seller;
+            acnt.outgoingsell_deals++; 
+        });
+    } else {
+        _accounts.modify( selleritr, 0, [&]( auto& acnt ) {
+            acnt.outgoingsell_deals++;
+        });
+    }
 
     auto iditem = _availableid.get();
     auto newid = ++iditem.availdealid;
