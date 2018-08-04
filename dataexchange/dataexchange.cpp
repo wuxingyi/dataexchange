@@ -328,15 +328,15 @@ void dataexchange::makedeal(account_name taker, account_name marketowner, uint64
     uint64_t otype = iter->order_type;
     eosio_assert( otype < ordertype_end, "bad ordertype" );
 
-    auto takeritr = _accounts.find(taker);
-    if( takeritr == _accounts.end() ) {
-        _accounts.emplace(_self, [&](auto& acnt){
-            acnt.owner = taker;
-        });
-    }
-
     //if order type is ask, then the taker is a buyer
     if (otype == ordertype_ask) {
+        auto takeritr = _accounts.find(taker);
+        if( takeritr == _accounts.end() ) {
+            _accounts.emplace(_self, [&](auto& acnt){
+                acnt.owner = taker;
+            });
+        }
+
         _accounts.modify( takeritr, 0, [&]( auto& acnt ) {
             eosio_assert(acnt.asset_balance >= iter->price , "buyer should have enough token");
 
@@ -367,9 +367,17 @@ void dataexchange::makedeal(account_name taker, account_name marketowner, uint64
             acnt.outgoingbuy_deals++;
         });        
 
-        _accounts.modify( takeritr, 0, [&]( auto& acnt ) {
-            acnt.outgoingsell_deals++;
-        });
+        auto takeritr = _accounts.find(taker);
+        if( takeritr == _accounts.end() ) {
+            _accounts.emplace(_self, [&](auto& acnt){
+                acnt.owner = taker;
+                acnt.outgoingsell_deals++;
+            });
+        } else {
+            _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
+                acnt.outgoingsell_deals++;
+            });
+        }
     }
 
 
