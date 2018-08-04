@@ -167,7 +167,7 @@ function step_14() {
     sleep 11
     echo "abi authorize SHOULD FAIL: because it's expired"
     cleos push action dex authorize ' {"maker": "buyer1", "dealid": 5} ' -p buyer1
-    cleos push action dex erasedeal '[6]' -p buyer1
+    cleos push action dex erasedeal '[5]' -p buyer1
     cleos get table dex  dex datamarkets -l -1
     cleos get table dex  dex accounts -l -1
 }

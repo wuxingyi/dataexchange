@@ -367,6 +367,7 @@ void dataexchange::makedeal(account_name taker, account_name marketowner, uint64
             acnt.outgoingbuy_deals++;
         });        
 
+        //the take is a seller
         auto takeritr = _accounts.find(taker);
         if( takeritr == _accounts.end() ) {
             _accounts.emplace(_self, [&](auto& acnt){
@@ -374,7 +375,7 @@ void dataexchange::makedeal(account_name taker, account_name marketowner, uint64
                 acnt.outgoingsell_deals++;
             });
         } else {
-            _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
+            _accounts.modify( takeritr, 0, [&]( auto& acnt ) {
                 acnt.outgoingsell_deals++;
             });
         }

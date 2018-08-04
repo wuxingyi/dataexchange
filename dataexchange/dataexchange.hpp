@@ -154,7 +154,7 @@ private:
         time_point_sec expiretime;
 
         uint64_t primary_key() const { return dealid; }
-        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(dealstate)(ordertype)(datahash)(price)(expiretime))
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(ordertype)(dealstate)(datahash)(price)(expiretime))
     }; 
     multi_index< N(deals), deal> _deals;
 
