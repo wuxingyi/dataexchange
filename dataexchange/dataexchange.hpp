@@ -31,7 +31,7 @@ public:
     //@abi action
     void removeorder(account_name orderowner, account_name marketowner, uint64_t orderid);
     //@abi action
-    void canceldeal(account_name buyer, account_name owner, uint64_t orderid);
+    void canceldeal(account_name canceler, account_name owner, uint64_t dealid);
     //@abi action
     void erasedeal(uint64_t dealid);
     //@abi action
@@ -51,7 +51,7 @@ public:
     //@abi action
     void suspendorder(account_name orderowner, account_name marketowner, uint64_t orderid);
     //@abi action
-    void resumeorder(account_name seller, account_name owner, uint64_t orderid);
+    void resumeorder(account_name orderowner, account_name marketowner, uint64_t orderid);
     //@abi action
     void suspendmkt(account_name owner, uint64_t marketid);
     //@abi action
