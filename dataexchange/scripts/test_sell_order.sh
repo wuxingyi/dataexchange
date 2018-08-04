@@ -55,7 +55,7 @@ function step_4() {
     cleos push action dex createorder ' {"orderowner": "seller2", "ordertype": 1, "marketid": 0, "price": "20.0000 SYS"} ' -p seller2
     cleos push action dex createorder ' {"orderowner": "seller3", "ordertype": 1, "marketid": 0, "price": "30.0000 SYS"} ' -p seller3
     cleos get table dex datasource1 marketorders
-}sing
+}
 
 
 # 5 try make deals
@@ -65,7 +65,7 @@ function step_5() {
     cleos push action dex makedeal ' {"taker": "buyer1", "marketowner": "datasource1", "orderid": 2} ' -p buyer1
     cleos push action dex makedeal ' {"taker": "buyer2", "marketowner": "datasource1", "orderid": 3} ' -p buyer2
     cleos get table dex datasource1 marketorders
-    cleos get table dex dex accountssing
+    cleos get table dex dex accounts
     cleos get table dex dex deals
 }
 
@@ -76,7 +76,7 @@ function step_6() {
     cleos push action dex authorize ' {"maker": "seller2", "dealid": 2} ' -p seller2
     cleos push action dex authorize ' {"maker": "seller3", "dealid": 3} ' -p seller3
     cleos get table dex datasource1 marketorders
-    cleos get table dex dex accountssing
+    cleos get table dex dex accounts
     cleos get table dex dex deals
 }
 
@@ -90,7 +90,7 @@ function step_7() {
     echo "abi makedeal SHOULD SUCCESS: order is resumed"
     cleos push action dex makedeal ' {"taker": "buyer1", "marketowner": "datasource1", "orderid": 1} ' -p buyer1
     cleos get table dex datasource1 marketorders
-    cleos get table dex dex accountssing
+    cleos get table dex dex accounts
     cleos get table dex dex deals
 }
 
@@ -133,7 +133,7 @@ function step_11() {
     cleos push action dex erasedeal '[2]' -p seller2
     cleos push action dex erasedeal '[3]' -p seller3
     cleos get table dex datasource1 marketorders
-}sing
+}
 
 # 12.buyer cancel deal 
 function step_12() {
