@@ -432,6 +432,8 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
         deal.dealstate = dealstate_finished;
     });
 
+    auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
+    auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
     if (dealiter->ordertype == ordertype_ask) {
         // add token to seller's account
         auto selleriter = _accounts.find(dealiter->maker);
@@ -440,9 +442,6 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
                 acnt.owner = dealiter->maker;
             });
         }
-
-        auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
-        auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
 
         _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
             acnt.asset_balance += sellertoken;
@@ -476,9 +475,6 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
             });
         }
 
-        auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
-        auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
-
         _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
             acnt.asset_balance += sellertoken;
             acnt.finished_deals++;
@@ -507,6 +503,7 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
     _markets.modify( mktiter, 0, [&]( auto& mkt) {
         mkt.mstats.ongoingdeals_nr--;
         mkt.mstats.finisheddeals_nr++;
+        mkt.mstats.tradingincome_nr += sourcetoken;
     });
 }
 
