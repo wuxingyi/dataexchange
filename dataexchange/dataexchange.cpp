@@ -308,6 +308,14 @@ void dataexchange::erasedeal(uint64_t dealid) {
             acnt.outgoingsell_deals--;
         });
     }
+
+    if (dealiter->dealstate != dealstate_finished) {
+        auto mktiter = _markets.find(dealiter->marketid);
+        eosio_assert(mktiter != _markets.end(), "no such market");
+        _markets.modify( mktiter, 0, [&]( auto& mkt) {
+            mkt.mstats.ongoingdeals_nr--;
+        });
+    }
     _deals.erase(dealiter);
 }
 
