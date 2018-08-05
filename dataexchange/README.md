@@ -61,4 +61,13 @@ cleos push action dddd removeorder '["eosio","bdibxtljzc",0]' -p eosio
 # order and deal design
 orders can be filled multiple times by calling ```makedeal``` abi, each time ```makedeal``` is called, a new deal is created with an unique ```dealid```.  
 if an order is canceled by the seller, no more deals can be made anymore, but pending deals can be continue to finish.  
-anyone can remove finished deal data by calling ```erasedeal``` to reduce memory usage, this is very important for a dapp with much active users.   
+anyone can remove finished deal data by calling ```erasedeal``` to reduce memory usage, this is very important for a dapp with large amount of active users.   
+
+# bidirection order system
+a user can put an order to the market, in current implemention there are two kinds of orders, which are **ask** order and **bid** order.
+we can the user proposed the order as a **maker**, and the user(s) calling the ```makedeal``` abi as a **taker**.   
+In a **ask** order, the maker is the seller, and the opposite side (aks **taker**) is the buyers;  
+In a **bid** order, the maker is the buyer, and the opposite side (aks **taker**) is the sellers.  
+In both **ask** and **bid** order, it is the **maker's** right to  ```authorize``` a deal before the data source actually upload data hash.  
+
+
