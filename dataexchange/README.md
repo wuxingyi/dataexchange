@@ -66,8 +66,8 @@ anyone can remove finished deal data by calling ```erasedeal``` to reduce memory
 # bidirection order system
 a user can put an order to the market, in current implemention there are two kinds of orders, which are **ask** order and **bid** order.
 we can the user proposed the order as a **maker**, and the user(s) calling the ```makedeal``` abi as a **taker**.   
-In a **ask** order, the maker is the seller, and the opposite side (aks **taker**) is the buyers;  
-In a **bid** order, the maker is the buyer, and the opposite side (aks **taker**) is the sellers.  
+In a **ask** order, the maker is the seller, and the opposite side (aka **taker**) is the buyers;  
+In a **bid** order, the maker is the buyer, and the opposite side (aka **taker**) is the sellers.  
 In both **ask** and **bid** order, it is the **maker's** right to  ```authorize``` a deal before the data source actually upload data hash.  
 
 
