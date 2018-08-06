@@ -70,4 +70,13 @@ In a **ask** order, the maker is the seller, and the opposite side (aka **taker*
 In a **bid** order, the maker is the buyer, and the opposite side (aka **taker**) is the sellers.  
 In both **ask** and **bid** order, it is the **maker's** right to  ```authorize``` a deal before the data source actually upload data hash.  
 
+# deal state machine
+previously the deal is finished if the data source upload the ipfs hash to blockchain,   
+but actually the buy should confirm that the hash is valid and the hash is exist in the ipfs network,  
+also, the file should carefully encoded by the following formula:  
+
+```Buyer's pubickey(seller_accountname + shared_secret(raw data))```
+
+after the buyer download the ipfs file, he should first decode it by the private key registered to the blockchain,   
+then check whether seller_accountname is the correct seller, if so, he can call confirmhash to put the state machine to the next state.
 
