@@ -87,7 +87,8 @@ private:
         uint64_t finisheddeals_nr;
         uint64_t ongoingdeals_nr;
         asset tradingincome_nr;
-        EOSLIB_SERIALIZE( marketstats, (totalopenorders_nr)(suspendedorders_nr)(finisheddeals_nr)(ongoingdeals_nr)(tradingincome_nr))
+        asset tradingvolume_nr;
+        EOSLIB_SERIALIZE( marketstats, (totalopenorders_nr)(suspendedorders_nr)(finisheddeals_nr)(ongoingdeals_nr)(tradingincome_nr)(tradingvolume_nr))
     };
 
 

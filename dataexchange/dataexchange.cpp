@@ -505,6 +505,7 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
         mkt.mstats.ongoingdeals_nr--;
         mkt.mstats.finisheddeals_nr++;
         mkt.mstats.tradingincome_nr += sourcetoken;
+        mkt.mstats.tradingvolume_nr += dealiter->price;
     });
 }
 
