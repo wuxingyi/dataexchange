@@ -39,6 +39,10 @@ public:
     //@abi action
     void uploadhash(uint64_t marketid, uint64_t dealid, string datahash);
     //@abi action
+    void confirmhash(account_name buyer, uint64_t dealid);
+    //@abi action
+    void uploadsecret(uint64_t marketid, uint64_t dealid, string secret);
+    //@abi action
     void deposit( account_name from, asset& quantity );
     //@abi action
     void withdraw( account_name owner, asset& quantity );
@@ -133,7 +137,9 @@ private:
     static const uint64_t dealstate_finished = 3;
     static const uint64_t dealstate_canceled = 4;
     static const uint64_t dealstate_expired = 5;
-    static const uint64_t dealstate_end = 6;
+    static const uint64_t dealstate_waitinghashcomfirm = 6;
+    static const uint64_t dealstate_hashcomfirmed = 7;
+    static const uint64_t dealstate_end = 8;
 
     static const uint64_t ordertype_start = 0;
     static const uint64_t ordertype_ask = 1;
@@ -151,11 +157,12 @@ private:
         uint64_t ordertype;
         uint64_t dealstate;
         string datahash;
+        string secret;
         asset price;
         time_point_sec expiretime;
 
         uint64_t primary_key() const { return dealid; }
-        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(ordertype)(dealstate)(datahash)(price)(expiretime))
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(ordertype)(dealstate)(datahash)(secret)(price)(expiretime))
     }; 
     multi_index< N(deals), deal> _deals;
 
@@ -217,5 +224,5 @@ private:
     multi_index< N(accounts), account> _accounts;
 };
 EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(removeorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)
-           (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)
+           (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)(confirmhash)(uploadsecret)
          )

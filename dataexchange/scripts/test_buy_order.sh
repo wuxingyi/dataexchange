@@ -100,9 +100,27 @@ function step_8() {
     cleos get table dex dex deals
 }
 
-# 9.sellers withdraw their tokens
+# 9.buyer confirm the datahash(calling comfirmhash)
 function step_9() {
-    echo "STEP 9: sellers withdraw their tokens"
+    echo "STEP 9: buyer comfirm the datahash"
+    cleos push action dex confirmhash '[ "buyer1", 1]' -p buyer1 
+    cleos push action dex confirmhash '[ "buyer2", 2]' -p buyer2
+    cleos get table dex dex accounts
+    cleos get table dex dex deals
+}
+
+# 10.datasource upload secret(calling uploadsecret)
+function step_10() {
+    echo "STEP 10: datasource upload secret"
+    cleos push action dex uploadsecret '[ 0, 1, "secret1"]' -p datasource1
+    cleos push action dex uploadsecret '[ 0, 2, "secret2" ]' -p datasource1
+    cleos get table dex dex accounts
+    cleos get table dex dex deals
+}
+
+# 11.sellers withdraw their tokens
+function step_11() {
+    echo "STEP 11: sellers withdraw their tokens"
     cleos push action dex withdraw '[ "seller1", "9.0000 SYS" ]' -p seller1
     cleos push action dex withdraw '[ "seller2", "18.0000 SYS" ]' -p seller2
     cleos get currency balance xingyitoken seller1
@@ -110,35 +128,35 @@ function step_9() {
     cleos get table dex dex accounts
 }
 
-# 10.datasource withdraw token
-function step_10() {
-    echo "STEP 10: datasource withdraw their tokens"
+# 12.datasource withdraw token
+function step_12() {
+    echo "STEP 12: datasource withdraw their tokens"
     cleos push action dex withdraw '[ "datasource1", "3.0000 SYS" ]' -p datasource1
     cleos get currency balance xingyitoken datasource1
     cleos get table dex dex accounts
 }
 
 
-# 11.sellers erase finished deal to reduce memory usage
-function step_11() {
-    echo "STEP 11: sellers erase deal to reduce memory usage"
+# 13.sellers erase finished deal to reduce memory usage
+function step_13() {
+    echo "STEP 13: sellers erase deal to reduce memory usage"
     cleos push action dex erasedeal '[1]' -p seller1
     cleos push action dex erasedeal '[2]' -p seller2
     cleos get table dex datasource1 marketorders
 }
 
-# 12.buyer cancel deal 
-function step_12() {
-    echo "STEP 12: buyer cancel deal and get refund"
+# 14.buyer cancel deal 
+function step_14() {
+    echo "STEP 14: buyer cancel deal and get refund"
     cleos push action dex makedeal ' {"taker": "seller1", "marketowner": "datasource1", "orderid": 1} ' -p seller1
     cleos get table dex dex accounts
     cleos push action dex canceldeal ' ["seller1", "datasource1", 4]' -p seller1
     cleos get table dex dex accounts
 }
 
-# 13.test market suspend、resume、remove and deal expireation
-function step_13() {
-    echo "STEP 13: test market suspend, resume and remove and deal expiration"
+# 15.test market suspend、resume、remove and deal expireation
+function step_15() {
+    echo "STEP 15: test market suspend, resume and remove and deal expiration"
     cleos push action dex createorder ' {"orderowner": "buyer1", "ordertype": 2, "marketid": 1, "price": "10.0000 SYS"} ' -p buyer1
     cleos push action dex suspendmkt ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
     cleos push action dex removeorder ' {"orderowner": "buyer1", "marketowner":"datasource2", "orderid": 3} ' -p buyer1

@@ -440,7 +440,6 @@ void dataexchange::authorize(account_name maker, uint64_t dealid) {
     });
 }
 
-
 //datahash is generated using the buyers public key encrypted user's data.
 //uploadhash is called by datasource(aka market owner).
 void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahash) {
@@ -458,6 +457,49 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
 
     _deals.modify( dealiter, 0, [&]( auto& deal) {
         deal.datahash = datahash;
+        deal.dealstate = dealstate_waitinghashcomfirm;
+    });
+}
+
+//a buyer comfirm the ipfs hash is valid
+void dataexchange::confirmhash(account_name buyer, uint64_t dealid) {
+    require_auth(buyer);
+
+    auto dealiter = _deals.find(dealid);
+    eosio_assert(dealiter != _deals.end() , "no such deal");
+    auto state = dealiter->dealstate;
+    eosio_assert(state == dealstate_waitinghashcomfirm, "deal state is not waiting dealstate_waitinghashcomfirm");
+    eosio_assert(dealiter->expiretime > time_point_sec(now()), "deal is already expired");
+
+    account_name _buyer;
+    if (dealiter->ordertype == ordertype_ask) {
+        _buyer = dealiter->taker;
+    } else if (dealiter->ordertype == ordertype_bid) {
+        _buyer = dealiter->maker;
+    }
+
+    eosio_assert(_buyer == buyer, "buyer is not correct");
+    _deals.modify( dealiter, 0, [&]( auto& deal) {
+        deal.dealstate = dealstate_hashcomfirmed;
+    });
+}
+
+//a datasource upload the shared secret of the raw data
+void dataexchange::uploadsecret(uint64_t marketid, uint64_t dealid, string secret){
+    auto dealiter = _deals.find(dealid);
+    eosio_assert(dealiter != _deals.end() , "no such deal");
+    eosio_assert(dealiter->dealstate == dealstate_hashcomfirmed, "deal state is not dealstate_hashcomfirmed");
+    eosio_assert(dealiter->marketid == marketid, "not correct marketid");
+    eosio_assert(dealiter->expiretime > time_point_sec(now()), "this deal has been expired");
+
+    auto mktiter = _markets.find(dealiter->marketid);
+    eosio_assert(mktiter != _markets.end(), "no such market");
+
+    //this abi should only run by the market owner
+    require_auth(mktiter->mowner);
+
+    _deals.modify( dealiter, 0, [&]( auto& deal) {
+        deal.datahash = secret;
         deal.dealstate = dealstate_finished;
     });
 
@@ -513,7 +555,6 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
         mkt.mstats.tradingvolume_nr += dealiter->price;
     });
 
-
     marketordertable orders(_self, dealiter->marketowner);
     auto iter = orders.find(dealiter->orderid);
     eosio_assert(iter!= orders.end() , "no such order");
@@ -522,7 +563,7 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
         order.ostats.o_inflightdeals_nr--;
         order.ostats.o_finisheddeals_nr++;
         order.ostats.o_finishedvolume_nr += dealiter->price;
-    });
+    });    
 }
 
 //deposit token to contract, all token will transfer to contract owner.
