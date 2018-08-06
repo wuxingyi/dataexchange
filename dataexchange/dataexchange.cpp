@@ -435,71 +435,48 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
 
     auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
     auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
-    if (dealiter->ordertype == ordertype_ask) {
-        // add token to seller's account
-        auto selleriter = _accounts.find(dealiter->maker);
-        if( selleriter == _accounts.end() ) {
-            selleriter = _accounts.emplace(_self, [&](auto& acnt){
-                acnt.owner = dealiter->maker;
-            });
-        }
 
-        _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
-            acnt.asset_balance += sellertoken;
-            acnt.finished_deals++;
-            acnt.outgoingsell_deals--;
-        });
+    auto otype = dealiter->ordertype;
+    account_name buyer, seller;
+    if (otype == ordertype_ask) {
+        buyer = dealiter->taker;
+        seller = dealiter->maker;
+    } else if (otype == ordertype_bid) {
+        buyer = dealiter->maker;
+        seller = dealiter->taker;
+    }
 
-        // add token to data source account
-        auto sourceitr = _accounts.find(dealiter->marketowner);
-        if( sourceitr == _accounts.end() ) {
-            sourceitr = _accounts.emplace(_self, [&](auto& acnt){
-                acnt.owner = dealiter->marketowner;
-            });
-        }
-
-        _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
-            acnt.asset_balance += sourcetoken;
-        });    
-        // modify buyers finished order data
-        auto buyeriter = _accounts.find(dealiter->taker);
-        _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
-            acnt.outgoingbuy_deals--;
-            acnt.finished_deals++;
-        });
-    } else if (dealiter->ordertype == ordertype_bid) {
-        // add token to seller's account
-        auto selleriter = _accounts.find(dealiter->taker);
-        if( selleriter == _accounts.end() ) {
-            selleriter = _accounts.emplace(_self, [&](auto& acnt){
-                acnt.owner = dealiter->maker;
-            });
-        }
-
-        _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
-            acnt.asset_balance += sellertoken;
-            acnt.finished_deals++;
-            acnt.outgoingsell_deals--;
-        });
-
-        // add token to data source account
-        auto sourceitr = _accounts.find(dealiter->marketowner);
-        if( sourceitr == _accounts.end() ) {
-            sourceitr = _accounts.emplace(_self, [&](auto& acnt){
-                acnt.owner = dealiter->marketowner;
-            });
-        }
-
-        _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
-            acnt.asset_balance += sourcetoken;
-        });    
-        // modify buyers finished order data
-        auto buyeriter = _accounts.find(dealiter->maker);
-        _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
-            acnt.outgoingbuy_deals--;
-            acnt.finished_deals++;
+    // add token to seller's account
+    auto selleriter = _accounts.find(seller);
+    if( selleriter == _accounts.end() ) {
+        selleriter = _accounts.emplace(_self, [&](auto& acnt){
+            acnt.owner = seller;
         });
     }
+
+    _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
+        acnt.asset_balance += sellertoken;
+        acnt.finished_deals++;
+        acnt.outgoingsell_deals--;
+    });
+
+    // add token to data source account
+    auto sourceitr = _accounts.find(dealiter->marketowner);
+    if( sourceitr == _accounts.end() ) {
+        sourceitr = _accounts.emplace(_self, [&](auto& acnt){
+            acnt.owner = dealiter->marketowner;
+        });
+    }
+
+    _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
+        acnt.asset_balance += sourcetoken;
+    });    
+    // modify buyers finished order data
+    auto buyeriter = _accounts.find(buyer);
+    _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
+        acnt.outgoingbuy_deals--;
+        acnt.finished_deals++;
+    });
 
     _markets.modify( mktiter, 0, [&]( auto& mkt) {
         mkt.mstats.ongoingdeals_nr--;
