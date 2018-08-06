@@ -136,14 +136,14 @@ function step_12() {
     cleos get table dex dex accounts
 }
 
-# 13.test market suspend、resume、remove
+# 13.test market suspend、resume、remove and deal expireation
 function step_13() {
-    echo "STEP 13: test market suspend, resume and remove"
+    echo "STEP 13: test market suspend, resume and remove and deal expiration"
     cleos push action dex createorder ' {"orderowner": "buyer1", "ordertype": 2, "marketid": 1, "price": "10.0000 SYS"} ' -p buyer1
     cleos push action dex suspendmkt ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
     cleos push action dex removeorder ' {"orderowner": "buyer1", "marketowner":"datasource2", "orderid": 3} ' -p buyer1
 
-    echo "abi creatorder SHOULD FAIL: creating order on a supsended marke"
+    echo "abi creatorder SHOULD FAIL: creating order on a supsended market"
     cleos push action dex createorder ' {"orderowner": "buyer1", "ordertype": 2, "marketid": 1, "price": "10.0000 SYS"} ' -p buyer1
     cleos push action dex resumemkt ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
     #should suscess
@@ -152,25 +152,18 @@ function step_13() {
     cleos push action dex suspendmkt ' {"owner": "datasource1", "marketid": 0} ' -p datasource1
     sleep 6
     cleos push action dex removemarket ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
+
+    echo "abi removemarket SHOULD FAIL: exist a inflight deal"
+    cleos push action dex removemarket ' {"owner": "datasource1", "marketid": 0} ' -p datasource1
+
+    sleep 5
+    echo "abi authorize SHOULD FAIL: because it's expired"
+    cleos push action dex authorize ' {"maker": "buyer1", "dealid": 3} ' -p buyer1
+    cleos push action dex erasedeal '[3]' -p buyer1
     cleos push action dex removemarket ' {"owner": "datasource1", "marketid": 0} ' -p datasource1
     cleos get table dex dex datamarkets -l -1
 }
 
-# 14.test deal expiration
-function step_14() {
-    echo "STEP 14: test deal expireation"
-    cleos push action dex createmarket ' {"owner": "datasource1", "desp": "datasource1", "type": 1} ' -p dex
-    cleos push action dex createorder ' {"orderowner": "buyer1", "ordertype": 2, "marketid": 2, "price": "10.0000 SYS"} ' -p buyer1
-    cleos push action dex makedeal ' {"taker": "seller1", "marketowner": "datasource1", "orderid": 5} ' -p seller1
-
-    #wait for expireation
-    sleep 11
-    echo "abi authorize SHOULD FAIL: because it's expired"
-    cleos push action dex authorize ' {"maker": "buyer1", "dealid": 5} ' -p buyer1
-    cleos push action dex erasedeal '[5]' -p buyer1
-    cleos get table dex  dex datamarkets -l -1
-    cleos get table dex  dex accounts -l -1
-}
 if [[ $# -ne 1 ]]; then 
     echo "usage: ./tokentest.sh step_number"
     exit -1

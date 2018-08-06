@@ -4,7 +4,7 @@
 using namespace std;
 
 //remove an data market, can only be made by the market owner.
-//we can only remove a suspended market with enough suspend time to make the ongoing deals finished.
+//we can only remove a suspended market with enough suspend time to make the inflight deals finished.
 //removed market will not be removed from the market table because this table will not be to big.
 //we kept the removed market alive because it can show some statistics about data trading.
 void dataexchange::removemarket(account_name owner, uint64_t marketid){
@@ -14,16 +14,20 @@ void dataexchange::removemarket(account_name owner, uint64_t marketid){
     eosio_assert(iter != _markets.end(), "market not have been created yet");
     eosio_assert(iter->mowner == owner , "have no permission to this market");
     eosio_assert(iter->issuspended == true, "only suspended market can be removed");
+    eosio_assert(iter->isremoved != true, "this market has already been removed");
     eosio_assert(time_point_sec(now()) > iter->minremovaltime, 
                  "market should have enought suspend time before removal");
+
+    eosio_assert(iter->mstats.inflightdeals_nr == 0, "market can't be removed because there are some inflight deals");
 
     marketordertable orders(_self, owner);
     auto orderiter = orders.begin();
     auto removedorders = 0;
     while(true) {
         if (orderiter != orders.end()) {
+            eosio_assert(orderiter->ostats.o_inflightdeals_nr == 0, "order can't be removed because there are some inflight deals");
             removedorders++;
-            orders.erase( orderiter++ );
+            orders.erase(orderiter++);
         } else {
             break;
         }
@@ -32,7 +36,7 @@ void dataexchange::removemarket(account_name owner, uint64_t marketid){
     _markets.modify( iter, 0, [&]( auto& mkt) {
         mkt.isremoved = true;
         mkt.mstats.suspendedorders_nr -= removedorders;
-        mkt.mstats.totalopenorders_nr = 0;
+        mkt.mstats.totalopenorders_nr -= removedorders;
     });
 }
 
@@ -209,7 +213,7 @@ void dataexchange::resumeorder(account_name orderowner, account_name marketowner
     });
 }
 
-//remove from data source so no new deals can be made, but ongoing deals still can be finished.
+//remove from data source so no new deals can be made, but inflight deals still can be finished.
 void dataexchange::removeorder(account_name orderowner, account_name marketowner, uint64_t orderid) {
     require_auth(orderowner);
 
@@ -218,6 +222,9 @@ void dataexchange::removeorder(account_name orderowner, account_name marketowner
 
     eosio_assert(iter != orders.end() , "no such order");
     eosio_assert(iter->orderowner == orderowner, "order doesn't belong to you");
+
+    //if there is inflight deals, please erase it before removing a order
+    eosio_assert(iter->ostats.o_inflightdeals_nr == 0, "please erase or cancel deal before removing an order");
 
     auto miter = _markets.find(iter->marketid);
     _markets.modify( miter, 0, [&]( auto& mkt) {
@@ -230,7 +237,7 @@ void dataexchange::removeorder(account_name orderowner, account_name marketowner
     orders.erase(iter);
 }
 
-//cancel an ongoing deal both sides
+//cancel an inflight deal both sides
 void dataexchange::canceldeal(account_name canceler, account_name owner, uint64_t dealid) {
     require_auth(canceler);
 
@@ -254,24 +261,31 @@ void dataexchange::canceldeal(account_name canceler, account_name owner, uint64_
         seller = dealiter->taker;
     }
 
-
     // refund buyer's tokens
     auto buyeritr = _accounts.find(buyer);
     eosio_assert(buyeritr != _accounts.end() , "buyer should have have account");
     _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
         acnt.asset_balance += dealiter->price;
-        acnt.outgoingbuy_deals--;
+        acnt.inflightbuy_deals--;
     });
 
     auto selleritr = _accounts.find(seller);
     eosio_assert(selleritr != _accounts.end() , "seller should have have account");
     _accounts.modify( selleritr , 0, [&]( auto& acnt ) {
-        acnt.outgoingsell_deals--;
+        acnt.inflightsell_deals--;
     });
 
 
     _markets.modify( mktiter, 0, [&]( auto& mkt) {
-        mkt.mstats.ongoingdeals_nr--;
+        mkt.mstats.inflightdeals_nr--;
+    });
+
+    marketordertable orders(_self, dealiter->marketowner);
+    auto iter = orders.find(dealiter->orderid);
+    eosio_assert(iter != orders.end() , "no such order");
+
+    orders.modify( iter, 0, [&]( auto& order) {
+        order.ostats.o_inflightdeals_nr--;
     });
 }
 
@@ -300,12 +314,12 @@ void dataexchange::erasedeal(uint64_t dealid) {
         auto buyeritr = _accounts.find(buyer);
         _accounts.modify( buyeritr, 0, [&]( auto& acnt ) {
             acnt.expired_deals++;
-            acnt.outgoingbuy_deals--;
+            acnt.inflightbuy_deals--;
         });
         auto selleritr = _accounts.find(seller);
         _accounts.modify( selleritr, 0, [&]( auto& acnt ) {
             acnt.expired_deals++;
-            acnt.outgoingsell_deals--;
+            acnt.inflightsell_deals--;
         });
     }
 
@@ -313,9 +327,20 @@ void dataexchange::erasedeal(uint64_t dealid) {
         auto mktiter = _markets.find(dealiter->marketid);
         eosio_assert(mktiter != _markets.end(), "no such market");
         _markets.modify( mktiter, 0, [&]( auto& mkt) {
-            mkt.mstats.ongoingdeals_nr--;
+            mkt.mstats.inflightdeals_nr--;
         });
     }
+
+    if (dealiter->dealstate != dealstate_finished) {
+        marketordertable orders(_self, dealiter->marketowner);
+        auto iter = orders.find(dealiter->orderid);
+        eosio_assert(iter!= orders.end() , "no such order");
+
+        orders.modify( iter, 0, [&]( auto& order) {
+            order.ostats.o_inflightdeals_nr--;
+        });
+    }
+
     _deals.erase(dealiter);
 }
 
@@ -358,7 +383,7 @@ void dataexchange::makedeal(account_name taker, account_name marketowner, uint64
 
         //deduct token from the buyer's account
         acnt.asset_balance -= iter->price;
-        acnt.outgoingbuy_deals++;
+        acnt.inflightbuy_deals++;
     });
 
     auto selleritr = _accounts.find(seller);
@@ -366,11 +391,11 @@ void dataexchange::makedeal(account_name taker, account_name marketowner, uint64
     if( selleritr == _accounts.end() ) {
         _accounts.emplace(_self, [&](auto& acnt){
             acnt.owner = seller;
-            acnt.outgoingsell_deals++; 
+            acnt.inflightsell_deals++; 
         });
     } else {
         _accounts.modify( selleritr, 0, [&]( auto& acnt ) {
-            acnt.outgoingsell_deals++;
+            acnt.inflightsell_deals++;
         });
     }
 
@@ -394,7 +419,10 @@ void dataexchange::makedeal(account_name taker, account_name marketowner, uint64
     });
 
     _markets.modify( mktiter, 0, [&]( auto& mkt) {
-        mkt.mstats.ongoingdeals_nr++;
+        mkt.mstats.inflightdeals_nr++;
+    });
+    orders.modify( iter, 0, [&]( auto& order) {
+        order.ostats.o_inflightdeals_nr++;
     });
 }
 
@@ -457,7 +485,7 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
     _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
         acnt.asset_balance += sellertoken;
         acnt.finished_deals++;
-        acnt.outgoingsell_deals--;
+        acnt.inflightsell_deals--;
     });
 
     // add token to data source account
@@ -474,15 +502,26 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
     // modify buyers finished order data
     auto buyeriter = _accounts.find(buyer);
     _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
-        acnt.outgoingbuy_deals--;
+        acnt.inflightbuy_deals--;
         acnt.finished_deals++;
     });
 
     _markets.modify( mktiter, 0, [&]( auto& mkt) {
-        mkt.mstats.ongoingdeals_nr--;
+        mkt.mstats.inflightdeals_nr--;
         mkt.mstats.finisheddeals_nr++;
         mkt.mstats.tradingincome_nr += sourcetoken;
         mkt.mstats.tradingvolume_nr += dealiter->price;
+    });
+
+
+    marketordertable orders(_self, dealiter->marketowner);
+    auto iter = orders.find(dealiter->orderid);
+    eosio_assert(iter!= orders.end() , "no such order");
+
+    orders.modify( iter, 0, [&]( auto& order) {
+        order.ostats.o_inflightdeals_nr--;
+        order.ostats.o_finisheddeals_nr++;
+        order.ostats.o_finishedvolume_nr += dealiter->price;
     });
 }
 
@@ -538,7 +577,7 @@ void dataexchange::withdraw(account_name owner, asset& quantity ) {
 
     // erase account when no more fund to free memory 
     if( itr->asset_balance.amount == 0 && itr->pkey.length() == 0 && 
-        itr->finished_deals == 0 && itr->outgoingbuy_deals == 0 && itr->outgoingsell_deals == 0) {
+        itr->finished_deals == 0 && itr->inflightbuy_deals == 0 && itr->inflightsell_deals == 0) {
        _accounts.erase(itr);
     }
 }
@@ -592,7 +631,7 @@ void dataexchange::deregpkey(account_name owner) {
     eosio_assert(itr != _accounts.end(), "account not registered yet");
 
     //reducer uncessary account erasal
-    if (itr->asset_balance.amount > 0 || itr->finished_deals > 0 || itr->outgoingbuy_deals > 0 || itr->outgoingsell_deals > 0) {
+    if (itr->asset_balance.amount > 0 || itr->finished_deals > 0 || itr->inflightbuy_deals > 0 || itr->inflightsell_deals > 0) {
         _accounts.modify( itr, 0, [&]( auto& acnt ) {
             acnt.pkey = "";
         });

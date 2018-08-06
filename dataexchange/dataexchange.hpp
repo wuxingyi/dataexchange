@@ -85,10 +85,10 @@ private:
         uint64_t totalopenorders_nr;
         uint64_t suspendedorders_nr;
         uint64_t finisheddeals_nr;
-        uint64_t ongoingdeals_nr;
+        uint64_t inflightdeals_nr;
         asset tradingincome_nr;
         asset tradingvolume_nr;
-        EOSLIB_SERIALIZE( marketstats, (totalopenorders_nr)(suspendedorders_nr)(finisheddeals_nr)(ongoingdeals_nr)(tradingincome_nr)(tradingvolume_nr))
+        EOSLIB_SERIALIZE( marketstats, (totalopenorders_nr)(suspendedorders_nr)(finisheddeals_nr)(inflightdeals_nr)(tradingincome_nr)(tradingvolume_nr))
     };
 
 
@@ -159,6 +159,14 @@ private:
     }; 
     multi_index< N(deals), deal> _deals;
 
+    struct orderstats {
+        //nr means number
+        uint64_t o_finisheddeals_nr;
+        asset o_finishedvolume_nr;
+        uint64_t o_inflightdeals_nr;
+        EOSLIB_SERIALIZE( orderstats, (o_finisheddeals_nr)(o_finishedvolume_nr)(o_inflightdeals_nr))
+    };
+
     //@abi table marketorders i64
     struct marketorder {
         uint64_t orderid;     //orderid is the primary key for quick erase of pening orders
@@ -167,11 +175,12 @@ private:
         uint64_t order_type; 
         asset price;
         bool issuspended; 
+        orderstats ostats;
 
         uint64_t primary_key() const { return orderid; }
         uint64_t by_orderowner() const { return orderowner; }
         uint64_t by_marketid() const { return marketid; }
-        EOSLIB_SERIALIZE( marketorder, (orderid)(marketid)(orderowner)(order_type)(price)(issuspended))
+        EOSLIB_SERIALIZE( marketorder, (orderid)(marketid)(orderowner)(order_type)(price)(issuspended)(ostats))
     };
 
     bool hasorder_byorderowner( account_name marketowner, account_name _orderowner)const {
@@ -196,13 +205,13 @@ private:
        asset        asset_balance;
        string       pkey;
        uint64_t     finished_deals;
-       uint64_t     outgoingbuy_deals;
-       uint64_t     outgoingsell_deals;
+       uint64_t     inflightbuy_deals;
+       uint64_t     inflightsell_deals;
        uint64_t     expired_deals;
 
        uint64_t primary_key()const { return owner; }
 
-       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey)(finished_deals)(outgoingbuy_deals)(outgoingsell_deals)(expired_deals))
+       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey)(finished_deals)(inflightbuy_deals)(inflightsell_deals)(expired_deals))
     };
 
     multi_index< N(accounts), account> _accounts;
