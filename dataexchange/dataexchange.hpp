@@ -60,6 +60,14 @@ public:
     void suspendmkt(account_name owner, uint64_t marketid);
     //@abi action
     void resumemkt(account_name owner, uint64_t marketid);
+    //@abi action
+    void directdeal(account_name buyer, account_name seller, asset &price);
+    //@abi action
+    void directhash(account_name buyer, account_name seller, asset &price);
+    //@abi action
+    void directack(account_name buyer, uint64_t dealid);
+    //@abi action
+    void directsecret(uint64_t marketid, uint64_t dealid, string secret);
 
 private:
     static const uint64_t typestart = 0;
@@ -224,5 +232,5 @@ private:
     multi_index< N(accounts), account> _accounts;
 };
 EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(removeorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)
-           (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)(confirmhash)(uploadsecret)
+           (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)(confirmhash)(uploadsecret)(directdeal)(directhash)(directack)(directsecret)
          )
