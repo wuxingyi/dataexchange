@@ -75,8 +75,15 @@ previously the deal is finished if the data source upload the ipfs hash to block
 but actually the buy should confirm that the hash is valid and the hash is exist in the ipfs network,  
 also, the file should carefully encoded by the following formula:  
 
-```Buyer's pubickey(seller_accountname + shared_secret(raw data))```
+```Buyer's pubickey(shared_secret(raw data))```
 
 after the buyer download the ipfs file, he should first decode it by the private key registered to the blockchain,   
-then check whether seller_accountname is the correct seller, if so, he can call confirmhash to put the state machine to the next state.
+then check whether seller_accountname is the correct seller, if so, he can call confirmhash to put the state machine to the next state.  
+we use dh key exchange to determine a shared_secret, and use this shared_secret to encrypt raw data.  
+In the new state machine design, the seller and data source negociate a share key end use it to encrypt raw data, the both encrypt it with  
+buyer's two different public keys registered to the blockchain, and both send it to the ipfs network. The buyer should first need to download both files from ipfs network,  
+and then decrypt with the corresponding private keys, if success, then we can safely conclude that the raw data is safely delivered to the buyer.  
+But the buyer can't decrypt the raw data because the shared secret is still unknown, which is only known to data source and seller.  
+We need a good design to avoid the buyer get the data without pay tokens to protect the seller and data source, but also need to prove the secret key shared by data source and seller can be seen by buyer.  
+So we reveal the shared key in a way that both the data source and seller reveal its own private key, and the block chain can check whether the two keys are qualified to dh key exchange rules.
 
