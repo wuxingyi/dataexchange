@@ -3,8 +3,9 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/crypto.h>
 #include <eosiolib/time.hpp>
-#include<eosiolib/singleton.hpp>
+#include <eosiolib/singleton.hpp>
 #include <cstring>
+#include <cmath>
 
 using namespace eosio;
 using namespace std;
@@ -41,8 +42,6 @@ public:
     //@abi action
     void confirmhash(account_name buyer, uint64_t dealid);
     //@abi action
-    void uploadsecret(uint64_t marketid, uint64_t dealid, string secret);
-    //@abi action
     void deposit( account_name from, asset& quantity );
     //@abi action
     void withdraw( account_name owner, asset& quantity );
@@ -61,13 +60,23 @@ public:
     //@abi action
     void resumemkt(account_name owner, uint64_t marketid);
     //@abi action
-    void directdeal(account_name buyer, account_name seller, asset &price);
+    void directdeal(account_name buyer, account_name seller, asset &price){}
     //@abi action
-    void directhash(account_name buyer, account_name seller, asset &price);
+    void directhash(account_name buyer, account_name seller, asset &price){}
     //@abi action
-    void directack(account_name buyer, uint64_t dealid);
+    void directack(account_name buyer, uint64_t dealid){}
     //@abi action
-    void directsecret(uint64_t marketid, uint64_t dealid, string secret);
+    void directsecret(uint64_t marketid, uint64_t dealid, string secret){}
+
+    // abis for dh secret exchange
+    //@abi action
+    void uploadpuba(account_name seller, uint64_t dealid, uint64_t puba);
+    //@abi action
+    void uploadpubb(account_name datasource, uint64_t dealid, uint64_t pubb);
+    //@abi action
+    void uploadpria(account_name seller, uint64_t dealid, uint64_t pria);
+    //@abi action
+    void uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib);
 
 private:
     static const uint64_t typestart = 0;
@@ -141,18 +150,31 @@ private:
 
     static const uint64_t dealstate_start = 0;
     static const uint64_t dealstate_waitingauthorize = 1;
-    static const uint64_t dealstate_waitinghash = 2;
-    static const uint64_t dealstate_finished = 3;
-    static const uint64_t dealstate_canceled = 4;
-    static const uint64_t dealstate_expired = 5;
-    static const uint64_t dealstate_waitinghashcomfirm = 6;
-    static const uint64_t dealstate_hashcomfirmed = 7;
-    static const uint64_t dealstate_end = 8;
+    static const uint64_t dealstate_waitingpubA = 2;
+    static const uint64_t dealstate_waitingpubB = 3;
+    static const uint64_t dealstate_waitinghash = 4;
+    static const uint64_t dealstate_waitinghashcomfirm = 5;
+    static const uint64_t dealstate_waitingpria = 6;
+    static const uint64_t dealstate_waitingprib = 7;
+    static const uint64_t dealstate_canceled = 8;
+    static const uint64_t dealstate_expired = 9;
+    static const uint64_t dealstate_finished = 10;
+    static const uint64_t dealstate_end = 11;
 
+    // consts for ordertype
     static const uint64_t ordertype_start = 0;
     static const uint64_t ordertype_ask = 1;
     static const uint64_t ordertype_bid = 2;
     static const uint64_t ordertype_end = 3;
+
+    // dh exchange parameters
+    struct dhparams {
+        uint64_t pubA;
+        uint64_t pubB;
+        uint64_t pria;
+        uint64_t prib;
+        EOSLIB_SERIALIZE( dhparams, (pubA)(pubB)(pria)(prib))
+    };
 
     //@abi table deals i64
     struct deal {
@@ -168,9 +190,10 @@ private:
         string secret;
         asset price;
         time_point_sec expiretime;
+        dhparams dhp;
 
         uint64_t primary_key() const { return dealid; }
-        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(ordertype)(dealstate)(datahash)(secret)(price)(expiretime))
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(ordertype)(dealstate)(datahash)(secret)(price)(expiretime)(dhp))
     }; 
     multi_index< N(deals), deal> _deals;
 
@@ -232,5 +255,6 @@ private:
     multi_index< N(accounts), account> _accounts;
 };
 EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(removeorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)
-           (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)(confirmhash)(uploadsecret)(directdeal)(directhash)(directack)(directsecret)
+           (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)(confirmhash)(directdeal)(directhash)(directack)(directsecret)
+           (uploadpuba)(uploadpubb)(uploadpria)(uploadprib)
          )

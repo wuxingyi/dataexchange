@@ -1,5 +1,6 @@
 #include "dataexchange.hpp"
 #include "base58.hpp"
+#include "utils.hpp"
 
 using namespace std;
 
@@ -436,7 +437,7 @@ void dataexchange::authorize(account_name maker, uint64_t dealid) {
     eosio_assert(dealiter->maker == maker, "this deal doesnot belong to you");
     eosio_assert(dealiter->expiretime > time_point_sec(now()), "this deal has been expired");
     _deals.modify( dealiter, 0, [&]( auto& deal) {
-        deal.dealstate = dealstate_waitinghash;
+        deal.dealstate = dealstate_waitingpubA;
     });
 }
 
@@ -480,90 +481,8 @@ void dataexchange::confirmhash(account_name buyer, uint64_t dealid) {
 
     eosio_assert(_buyer == buyer, "buyer is not correct");
     _deals.modify( dealiter, 0, [&]( auto& deal) {
-        deal.dealstate = dealstate_hashcomfirmed;
+        deal.dealstate = dealstate_waitingpria;
     });
-}
-
-//a datasource upload the shared secret of the raw data
-void dataexchange::uploadsecret(uint64_t marketid, uint64_t dealid, string secret){
-    auto dealiter = _deals.find(dealid);
-    eosio_assert(dealiter != _deals.end() , "no such deal");
-    eosio_assert(dealiter->dealstate == dealstate_hashcomfirmed, "deal state is not dealstate_hashcomfirmed");
-    eosio_assert(dealiter->marketid == marketid, "not correct marketid");
-    eosio_assert(dealiter->expiretime > time_point_sec(now()), "this deal has been expired");
-
-    auto mktiter = _markets.find(dealiter->marketid);
-    eosio_assert(mktiter != _markets.end(), "no such market");
-
-    //this abi should only run by the market owner
-    require_auth(mktiter->mowner);
-
-    _deals.modify( dealiter, 0, [&]( auto& deal) {
-        deal.datahash = secret;
-        deal.dealstate = dealstate_finished;
-    });
-
-    auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
-    auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
-
-    auto otype = dealiter->ordertype;
-    account_name buyer, seller;
-    if (otype == ordertype_ask) {
-        buyer = dealiter->taker;
-        seller = dealiter->maker;
-    } else if (otype == ordertype_bid) {
-        buyer = dealiter->maker;
-        seller = dealiter->taker;
-    }
-
-    // add token to seller's account
-    auto selleriter = _accounts.find(seller);
-    if( selleriter == _accounts.end() ) {
-        selleriter = _accounts.emplace(_self, [&](auto& acnt){
-            acnt.owner = seller;
-        });
-    }
-
-    _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
-        acnt.asset_balance += sellertoken;
-        acnt.finished_deals++;
-        acnt.inflightsell_deals--;
-    });
-
-    // add token to data source account
-    auto sourceitr = _accounts.find(dealiter->marketowner);
-    if( sourceitr == _accounts.end() ) {
-        sourceitr = _accounts.emplace(_self, [&](auto& acnt){
-            acnt.owner = dealiter->marketowner;
-        });
-    }
-
-    _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
-        acnt.asset_balance += sourcetoken;
-    });    
-    // modify buyers finished order data
-    auto buyeriter = _accounts.find(buyer);
-    _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
-        acnt.inflightbuy_deals--;
-        acnt.finished_deals++;
-    });
-
-    _markets.modify( mktiter, 0, [&]( auto& mkt) {
-        mkt.mstats.inflightdeals_nr--;
-        mkt.mstats.finisheddeals_nr++;
-        mkt.mstats.tradingincome_nr += sourcetoken;
-        mkt.mstats.tradingvolume_nr += dealiter->price;
-    });
-
-    marketordertable orders(_self, dealiter->marketowner);
-    auto iter = orders.find(dealiter->orderid);
-    eosio_assert(iter!= orders.end() , "no such order");
-
-    orders.modify( iter, 0, [&]( auto& order) {
-        order.ostats.o_inflightdeals_nr--;
-        order.ostats.o_finisheddeals_nr++;
-        order.ostats.o_finishedvolume_nr += dealiter->price;
-    });    
 }
 
 //deposit token to contract, all token will transfer to contract owner.
@@ -679,4 +598,156 @@ void dataexchange::deregpkey(account_name owner) {
     } else {
         _accounts.erase(itr);
     }
+}
+
+//a seller upload public A param
+void dataexchange::uploadpuba(account_name seller, uint64_t dealid, uint64_t puba) {
+    require_auth(seller);
+
+    auto dealiter = _deals.find(dealid);
+    eosio_assert(dealiter != _deals.end() , "no such deal");
+    auto state = dealiter->dealstate;
+    eosio_assert(state == dealstate_waitingpubA, "deal state is not waiting dealstate_waitingpubA");
+    eosio_assert(dealiter->expiretime > time_point_sec(now()), "deal is already expired");
+
+    account_name _seller;
+    if (dealiter->ordertype == ordertype_ask) {
+        _seller = dealiter->maker;
+    } else if (dealiter->ordertype == ordertype_bid) {
+        _seller = dealiter->taker;
+    }
+
+    eosio_assert(_seller == seller, "seller is not correct");
+    _deals.modify( dealiter, 0, [&]( auto& deal) {
+        deal.dealstate = dealstate_waitingpubB;
+        deal.dhp.pubA = puba;
+    });
+}
+
+//a datasource upload public B param
+void dataexchange::uploadpubb(account_name datasource, uint64_t dealid, uint64_t pubb) {
+    require_auth(datasource);
+
+    auto dealiter = _deals.find(dealid);
+    eosio_assert(dealiter != _deals.end() , "no such deal");
+    auto state = dealiter->dealstate;
+    eosio_assert(state == dealstate_waitingpubB, "deal state is not waiting dealstate_waitingpubB");
+    eosio_assert(dealiter->expiretime > time_point_sec(now()), "deal is already expired");
+    eosio_assert(dealiter->marketowner == datasource, "datasource is not correct");
+
+    _deals.modify( dealiter, 0, [&]( auto& deal) {
+        deal.dealstate = dealstate_waitinghash;
+        deal.dhp.pubB = pubb;
+    });
+}
+
+//a seller upload the private secret a
+void dataexchange::uploadpria(account_name seller, uint64_t dealid, uint64_t pria){
+    require_auth(seller);
+
+    auto dealiter = _deals.find(dealid);
+    eosio_assert(dealiter != _deals.end() , "no such deal");
+    auto state = dealiter->dealstate;
+    eosio_assert(state == dealstate_waitingpria, "deal state is not waiting dealstate_waitingpria");
+    eosio_assert(dealiter->expiretime > time_point_sec(now()), "deal is already expired");
+
+    account_name _seller;
+    if (dealiter->ordertype == ordertype_ask) {
+        _seller = dealiter->maker;
+    } else if (dealiter->ordertype == ordertype_bid) {
+        _seller = dealiter->taker;
+    }
+
+    eosio_assert(_seller == seller, "seller is not correct");
+    _deals.modify( dealiter, 0, [&]( auto& deal) {
+        deal.dealstate = dealstate_waitingprib;
+        deal.dhp.pria = pria;
+    });
+}
+
+//a datasource upload the private secret b
+void dataexchange::uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib) {
+    auto dealiter = _deals.find(dealid);
+    eosio_assert(dealiter != _deals.end() , "no such deal");
+    eosio_assert(dealiter->dealstate == dealstate_waitingprib, "deal state is not dealstate_waitingprib");
+    eosio_assert(dealiter->marketid == marketid, "not correct marketid");
+    eosio_assert(dealiter->expiretime > time_point_sec(now()), "this deal has been expired");
+
+    auto mktiter = _markets.find(dealiter->marketid);
+    eosio_assert(mktiter != _markets.end(), "no such market");
+
+    //this abi should only run by the market owner
+    require_auth(mktiter->mowner);
+    dhparams dhp = dealiter->dhp;
+    eosio_assert(mktiter != _markets.end(), "no such market");
+
+    //secret check
+    eosio_assert(powmodp(dhp.pubA, prib) == powmodp(dhp.pubB, dhp.pria), "bad pubA");
+
+    _deals.modify( dealiter, 0, [&]( auto& deal) {
+        deal.dealstate = dealstate_finished;
+        deal.dhp.prib = prib;
+    });
+
+    auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
+    auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
+
+    auto otype = dealiter->ordertype;
+    account_name buyer, seller;
+    if (otype == ordertype_ask) {
+        buyer = dealiter->taker;
+        seller = dealiter->maker;
+    } else if (otype == ordertype_bid) {
+        buyer = dealiter->maker;
+        seller = dealiter->taker;
+    }
+
+    // add token to seller's account
+    auto selleriter = _accounts.find(seller);
+    if( selleriter == _accounts.end() ) {
+        selleriter = _accounts.emplace(_self, [&](auto& acnt){
+            acnt.owner = seller;
+        });
+    }
+
+    _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
+        acnt.asset_balance += sellertoken;
+        acnt.finished_deals++;
+        acnt.inflightsell_deals--;
+    });
+
+    // add token to data source account
+    auto sourceitr = _accounts.find(dealiter->marketowner);
+    if( sourceitr == _accounts.end() ) {
+        sourceitr = _accounts.emplace(_self, [&](auto& acnt){
+            acnt.owner = dealiter->marketowner;
+        });
+    }
+
+    _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
+        acnt.asset_balance += sourcetoken;
+    });    
+    // modify buyers finished order data
+    auto buyeriter = _accounts.find(buyer);
+    _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
+        acnt.inflightbuy_deals--;
+        acnt.finished_deals++;
+    });
+
+    _markets.modify( mktiter, 0, [&]( auto& mkt) {
+        mkt.mstats.inflightdeals_nr--;
+        mkt.mstats.finisheddeals_nr++;
+        mkt.mstats.tradingincome_nr += sourcetoken;
+        mkt.mstats.tradingvolume_nr += dealiter->price;
+    });
+
+    marketordertable orders(_self, dealiter->marketowner);
+    auto iter = orders.find(dealiter->orderid);
+    eosio_assert(iter!= orders.end() , "no such order");
+
+    orders.modify( iter, 0, [&]( auto& order) {
+        order.ostats.o_inflightdeals_nr--;
+        order.ostats.o_finisheddeals_nr++;
+        order.ostats.o_finishedvolume_nr += dealiter->price;
+    });    
 }
