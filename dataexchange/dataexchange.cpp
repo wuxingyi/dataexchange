@@ -410,7 +410,8 @@ void dataexchange::makedeal(account_name taker, account_name marketowner, uint64
         deal.marketowner = marketowner;
         deal.orderid = orderid;
         deal.marketid = iter->marketid;
-        deal.datahash = "";
+        deal.source_datahash = "";
+        deal.seller_datahash = "";
         deal.dealstate = dealstate_waitingauthorize;
         deal.ordertype = otype;
         deal.maker = iter->orderowner;
@@ -443,7 +444,9 @@ void dataexchange::authorize(account_name maker, uint64_t dealid) {
 
 //datahash is generated using the buyers public key encrypted user's data.
 //uploadhash is called by datasource(aka market owner).
-void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahash) {
+void dataexchange::uploadhash(account_name sender, uint64_t marketid, uint64_t dealid, string datahash) {
+    require_auth(sender);
+
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
     eosio_assert(dealiter->dealstate == dealstate_waitinghash, "deal state is not dealstate_waitinghash");
@@ -453,12 +456,26 @@ void dataexchange::uploadhash(uint64_t marketid, uint64_t dealid, string datahas
     auto mktiter = _markets.find(dealiter->marketid);
     eosio_assert(mktiter != _markets.end(), "no such market");
 
-    //this abi should only run by the market owner
-    require_auth(mktiter->mowner);
 
     _deals.modify( dealiter, 0, [&]( auto& deal) {
-        deal.datahash = datahash;
-        deal.dealstate = dealstate_waitinghashcomfirm;
+        if (sender == dealiter->marketowner) {
+            eosio_assert(dealiter->source_datahash == "", "don't send hash more than once");
+            deal.source_datahash = datahash;
+        } else {
+            account_name _seller;
+            if (dealiter->ordertype == ordertype_ask) {
+                _seller = dealiter->maker;
+            } else if (dealiter->ordertype == ordertype_bid) {
+                _seller = dealiter->taker;
+            }
+            
+            eosio_assert(_seller == sender, "only seller can do this");
+            eosio_assert(dealiter->seller_datahash == "", "don't send hash more than once");
+            deal.seller_datahash = datahash;
+        }
+
+        if (deal.seller_datahash != "" && deal.source_datahash != "")
+            deal.dealstate = dealstate_waitinghashcomfirm;
     });
 }
 

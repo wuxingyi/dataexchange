@@ -38,7 +38,7 @@ public:
     //@abi action
     void makedeal(account_name taker, account_name marketowner, uint64_t orderid);
     //@abi action
-    void uploadhash(uint64_t marketid, uint64_t dealid, string datahash);
+    void uploadhash(account_name sender, uint64_t marketid, uint64_t dealid, string datahash);
     //@abi action
     void confirmhash(account_name buyer, uint64_t dealid);
     //@abi action
@@ -186,14 +186,15 @@ private:
         account_name taker;
         uint64_t ordertype;
         uint64_t dealstate;
-        string datahash;
+        string source_datahash;
+        string seller_datahash;
         string secret;
         asset price;
         time_point_sec expiretime;
         dhparams dhp;
 
         uint64_t primary_key() const { return dealid; }
-        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(ordertype)(dealstate)(datahash)(secret)(price)(expiretime)(dhp))
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(ordertype)(dealstate)(source_datahash)(seller_datahash)(secret)(price)(expiretime)(dhp))
     }; 
     multi_index< N(deals), deal> _deals;
 
