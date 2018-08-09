@@ -295,12 +295,12 @@ void dataexchange::erasedeal(uint64_t dealid) {
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
     auto state = dealiter->dealstate;
-    if (dealiter->dealstate != dealstate_finished && dealiter->expiretime < time_point_sec(now())) {
+    if (dealiter->dealstate != dealstate_finished && dealiter->dealstate != dealstate_wrongsecret && dealiter->expiretime < time_point_sec(now())) {
         state = dealstate_expired;
     }
 
-    eosio_assert(dealiter->dealstate == dealstate_finished || state == dealstate_expired, 
-                 "deal state is not dealstate_finished or dealstate_expired");
+    eosio_assert(dealiter->dealstate == dealstate_finished || state == dealstate_expired || dealiter->dealstate == dealstate_wrongsecret, 
+                 "deal state is not dealstate_finished、dealstate_expired or dealstate_wrongsecret");
 
     account_name buyer, seller;
     if (dealiter->ordertype == ordertype_ask) {
@@ -335,7 +335,7 @@ void dataexchange::erasedeal(uint64_t dealid) {
     if (dealiter->dealstate != dealstate_finished) {
         marketordertable orders(_self, dealiter->marketowner);
         auto iter = orders.find(dealiter->orderid);
-        eosio_assert(iter!= orders.end() , "no such order");
+        eosio_assert(iter != orders.end() , "no such order");
 
         orders.modify( iter, 0, [&]( auto& order) {
             order.ostats.o_inflightdeals_nr--;
@@ -697,17 +697,6 @@ void dataexchange::uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib)
     dhparams dhp = dealiter->dhp;
     eosio_assert(mktiter != _markets.end(), "no such market");
 
-    //secret check
-    eosio_assert(powmodp(dhp.pubA, prib) == powmodp(dhp.pubB, dhp.pria), "bad pubA");
-
-    _deals.modify( dealiter, 0, [&]( auto& deal) {
-        deal.dealstate = dealstate_finished;
-        deal.dhp.prib = prib;
-    });
-
-    auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
-    auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
-
     auto otype = dealiter->ordertype;
     account_name buyer, seller;
     if (otype == ordertype_ask) {
@@ -717,8 +706,6 @@ void dataexchange::uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib)
         buyer = dealiter->maker;
         seller = dealiter->taker;
     }
-
-    // add token to seller's account
     auto selleriter = _accounts.find(seller);
     if( selleriter == _accounts.end() ) {
         selleriter = _accounts.emplace(_self, [&](auto& acnt){
@@ -726,11 +713,9 @@ void dataexchange::uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib)
         });
     }
 
-    _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
-        acnt.asset_balance += sellertoken;
-        acnt.finished_deals++;
-        acnt.inflightsell_deals--;
-    });
+    // modify buyers finished order data
+    auto buyeriter = _accounts.find(buyer);
+    eosio_assert(buyeriter != _accounts.end(), "buyer should have account");
 
     // add token to data source account
     auto sourceitr = _accounts.find(dealiter->marketowner);
@@ -739,31 +724,70 @@ void dataexchange::uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib)
             acnt.owner = dealiter->marketowner;
         });
     }
-
-    _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
-        acnt.asset_balance += sourcetoken;
-    });    
-    // modify buyers finished order data
-    auto buyeriter = _accounts.find(buyer);
-    _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
-        acnt.inflightbuy_deals--;
-        acnt.finished_deals++;
-    });
-
-    _markets.modify( mktiter, 0, [&]( auto& mkt) {
-        mkt.mstats.inflightdeals_nr--;
-        mkt.mstats.finisheddeals_nr++;
-        mkt.mstats.tradingincome_nr += sourcetoken;
-        mkt.mstats.tradingvolume_nr += dealiter->price;
-    });
-
     marketordertable orders(_self, dealiter->marketowner);
     auto iter = orders.find(dealiter->orderid);
     eosio_assert(iter!= orders.end() , "no such order");
 
-    orders.modify( iter, 0, [&]( auto& order) {
-        order.ostats.o_inflightdeals_nr--;
-        order.ostats.o_finisheddeals_nr++;
-        order.ostats.o_finishedvolume_nr += dealiter->price;
-    });    
+    //secret check failed, this is a wrong secret
+    if (powmodp(dhp.pubA, prib) != powmodp(dhp.pubB, dhp.pria)) {
+        _deals.modify( dealiter, 0, [&]( auto& deal) {
+            deal.dhp.prib = prib;
+            deal.dealstate = dealstate_wrongsecret;
+        });
+        
+        _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
+            //refund to buyer because the seller and datasource are suspect to telling lies about the data.
+            acnt.asset_balance += dealiter->price;
+        });
+        //we only set the seller as suspicious
+        _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
+            acnt.suspicious_deals++;
+        });
+
+        _markets.modify( mktiter, 0, [&]( auto& mkt) {
+            mkt.mstats.suspiciousdeals_nr++;
+        });
+        orders.modify( iter, 0, [&]( auto& order) {
+            order.ostats.o_suspiciousdeals_nr++;
+        });    
+    } else {
+        _deals.modify( dealiter, 0, [&]( auto& deal) {
+            deal.dealstate = dealstate_finished;
+            deal.dhp.prib = prib;
+            deal.secret = powmodp(dhp.pubA, prib);
+        });
+
+        auto sellertoken = asset(uint64_t(0.9 * dealiter->price.amount));
+        auto sourcetoken = asset(uint64_t(0.1 * dealiter->price.amount));
+
+        // add token to seller's account
+
+        _accounts.modify( selleriter, 0, [&]( auto& acnt ) {
+            acnt.asset_balance += sellertoken;
+            acnt.finished_deals++;
+            acnt.inflightsell_deals--;
+        });
+
+        _accounts.modify( sourceitr, 0, [&]( auto& acnt ) {
+            acnt.asset_balance += sourcetoken;
+        });    
+
+        _accounts.modify( buyeriter, 0, [&]( auto& acnt ) {
+            acnt.inflightbuy_deals--;
+            acnt.finished_deals++;
+        });
+
+        _markets.modify( mktiter, 0, [&]( auto& mkt) {
+            mkt.mstats.inflightdeals_nr--;
+            mkt.mstats.finisheddeals_nr++;
+            mkt.mstats.tradingincome_nr += sourcetoken;
+            mkt.mstats.tradingvolume_nr += dealiter->price;
+        });
+
+        orders.modify( iter, 0, [&]( auto& order) {
+            order.ostats.o_inflightdeals_nr--;
+            order.ostats.o_finisheddeals_nr++;
+            order.ostats.o_finishedvolume_nr += dealiter->price;
+        });    
+    }
 }

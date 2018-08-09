@@ -107,9 +107,10 @@ private:
         uint64_t suspendedorders_nr;
         uint64_t finisheddeals_nr;
         uint64_t inflightdeals_nr;
+        uint64_t suspiciousdeals_nr;
         asset tradingincome_nr;
         asset tradingvolume_nr;
-        EOSLIB_SERIALIZE( marketstats, (totalopenorders_nr)(suspendedorders_nr)(finisheddeals_nr)(inflightdeals_nr)(tradingincome_nr)(tradingvolume_nr))
+        EOSLIB_SERIALIZE( marketstats, (totalopenorders_nr)(suspendedorders_nr)(finisheddeals_nr)(inflightdeals_nr)(suspiciousdeals_nr)(tradingincome_nr)(tradingvolume_nr))
     };
 
 
@@ -159,7 +160,8 @@ private:
     static const uint64_t dealstate_canceled = 8;
     static const uint64_t dealstate_expired = 9;
     static const uint64_t dealstate_finished = 10;
-    static const uint64_t dealstate_end = 11;
+    static const uint64_t dealstate_wrongsecret = 11;
+    static const uint64_t dealstate_end = 12;
 
     // consts for ordertype
     static const uint64_t ordertype_start = 0;
@@ -203,7 +205,8 @@ private:
         uint64_t o_finisheddeals_nr;
         asset o_finishedvolume_nr;
         uint64_t o_inflightdeals_nr;
-        EOSLIB_SERIALIZE( orderstats, (o_finisheddeals_nr)(o_finishedvolume_nr)(o_inflightdeals_nr))
+        uint64_t o_suspiciousdeals_nr;
+        EOSLIB_SERIALIZE( orderstats, (o_finisheddeals_nr)(o_finishedvolume_nr)(o_inflightdeals_nr)(o_suspiciousdeals_nr))
     };
 
     //@abi table marketorders i64
@@ -247,10 +250,12 @@ private:
        uint64_t     inflightbuy_deals;
        uint64_t     inflightsell_deals;
        uint64_t     expired_deals;
+       uint64_t     suspicious_deals;
+
 
        uint64_t primary_key()const { return owner; }
 
-       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey)(finished_deals)(inflightbuy_deals)(inflightsell_deals)(expired_deals))
+       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey)(finished_deals)(inflightbuy_deals)(inflightsell_deals)(expired_deals)(suspicious_deals))
     };
 
     multi_index< N(accounts), account> _accounts;

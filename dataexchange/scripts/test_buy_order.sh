@@ -129,7 +129,9 @@ function step_10() {
 function step_11() {
     echo "STEP 11: seller upload private a"
     # p=23, g=5, A=8, a=6, B=19, b=15, s=2
-    cleos push action dex uploadpria '[ "seller1", 1, 6 ]' -p seller1
+    # put a wrong one
+    cleos push action dex uploadpria '[ "seller1", 1, 9 ]' -p seller1
+    # put a correct one
     cleos push action dex uploadpria '[ "seller2", 2, 6 ]' -p seller2
     cleos get table dex dex accounts
     cleos get table dex dex deals
@@ -149,6 +151,7 @@ function step_12() {
 # 13.sellers withdraw their tokens
 function step_13() {
     echo "STEP 13: sellers withdraw their tokens"
+    echo "abi withdraw SHOULD FAIL: no tokens earned because of wrong secret"
     cleos push action dex withdraw '[ "seller1", "9.0000 SYS" ]' -p seller1
     cleos push action dex withdraw '[ "seller2", "18.0000 SYS" ]' -p seller2
     cleos get currency balance xingyitoken seller1
@@ -159,7 +162,7 @@ function step_13() {
 # 14.datasource withdraw token
 function step_14() {
     echo "STEP 14: datasource withdraw their tokens"
-    cleos push action dex withdraw '[ "datasource1", "3.0000 SYS" ]' -p datasource1
+    cleos push action dex withdraw '[ "datasource1", "2.0000 SYS" ]' -p datasource1
     cleos get currency balance xingyitoken datasource1
     cleos get table dex dex accounts
 }
