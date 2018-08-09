@@ -114,12 +114,12 @@ function step_8() {
 # 9.seller upload datahash(calling uploadhash)
 function step_9() {
     echo "STEP 9: send datahash"
-    cleos push action dex uploadhash '["datasource1",  0, 1, "asdfasdf"]' -p datasource1
-    cleos push action dex uploadhash '["datasource1",  0, 2, "asdfasf" ]' -p datasource1
-    cleos push action dex uploadhash '["datasource1",  0, 3, "asdfasf" ]' -p datasource1
-    cleos push action dex uploadhash '["seller1",  0, 1, "abc"]' -p seller1
-    cleos push action dex uploadhash '["seller2",  0, 2, "abd" ]' -p seller2
-    cleos push action dex uploadhash '["seller3",  0, 3, "www" ]' -p seller3
+    cleos push action dex uploadhash '["datasource1",  1, "asdfasdf"]' -p datasource1
+    cleos push action dex uploadhash '["datasource1",  2, "asdfasf" ]' -p datasource1
+    cleos push action dex uploadhash '["datasource1",  3, "asdfasf" ]' -p datasource1
+    cleos push action dex uploadhash '["seller1",  1, "abc"]' -p seller1
+    cleos push action dex uploadhash '["seller2",  2, "abd" ]' -p seller2
+    cleos push action dex uploadhash '["seller3",  3, "www" ]' -p seller3
     cleos get table dex dex accounts
     cleos get table dex dex deals
 }

@@ -38,7 +38,7 @@ public:
     //@abi action
     void makedeal(account_name taker, account_name marketowner, uint64_t orderid);
     //@abi action
-    void uploadhash(account_name sender, uint64_t marketid, uint64_t dealid, string datahash);
+    void uploadhash(account_name sender, uint64_t dealid, string datahash);
     //@abi action
     void confirmhash(account_name buyer, uint64_t dealid);
     //@abi action

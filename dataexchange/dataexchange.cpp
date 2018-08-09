@@ -444,13 +444,12 @@ void dataexchange::authorize(account_name maker, uint64_t dealid) {
 
 //datahash is generated using the buyers public key encrypted user's data.
 //uploadhash is called by datasource(aka market owner).
-void dataexchange::uploadhash(account_name sender, uint64_t marketid, uint64_t dealid, string datahash) {
+void dataexchange::uploadhash(account_name sender, uint64_t dealid, string datahash) {
     require_auth(sender);
 
     auto dealiter = _deals.find(dealid);
     eosio_assert(dealiter != _deals.end() , "no such deal");
     eosio_assert(dealiter->dealstate == dealstate_waitinghash, "deal state is not dealstate_waitinghash");
-    eosio_assert(dealiter->marketid == marketid, "not correct marketid");
     eosio_assert(dealiter->expiretime > time_point_sec(now()), "this deal has been expired");
 
     auto mktiter = _markets.find(dealiter->marketid);
