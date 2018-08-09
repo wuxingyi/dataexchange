@@ -187,7 +187,7 @@ function step_16() {
 
 # 17.test market suspend、resume、remove and deal expireation
 function step_17() {
-    echo "STEP 15: test market suspend, resume and remove and deal expiration"
+    echo "STEP 17: test market suspend, resume and remove and deal expiration"
     cleos push action dex createorder ' {"orderowner": "buyer1", "ordertype": 2, "marketid": 1, "price": "10.0000 SYS"} ' -p buyer1
     cleos push action dex suspendmkt ' {"owner": "datasource2", "marketid": 1} ' -p datasource2
     cleos push action dex removeorder ' {"orderowner": "buyer1", "marketowner":"datasource2", "orderid": 3} ' -p buyer1
