@@ -729,6 +729,8 @@ void dataexchange::uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib)
     eosio_assert(iter!= orders.end() , "no such order");
 
     //secret check failed, this is a wrong secret
+    //(fixme)powmodp cost to much cpu resource, the the test case, it cost 14996us, 10 times higher than ordinary operations.
+    //maybe ecdh is cost less cpu time, we should try it asap.
     if (powmodp(dhp.pubA, prib) != powmodp(dhp.pubB, dhp.pria)) {
         _deals.modify( dealiter, 0, [&]( auto& deal) {
             deal.dhp.prib = prib;
@@ -791,3 +793,20 @@ void dataexchange::uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib)
         });    
     }
 }
+
+void dataexchange::directdeal(account_name buyer, account_name seller, asset &price){
+
+}
+
+void dataexchange::directhash(account_name buyer, account_name seller, asset &price){
+
+}
+
+void dataexchange::directack(account_name buyer, uint64_t dealid){
+
+}
+
+void dataexchange::directsecret(uint64_t marketid, uint64_t dealid, string secret){
+
+}
+

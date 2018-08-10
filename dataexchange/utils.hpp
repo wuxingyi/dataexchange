@@ -1,7 +1,7 @@
 #include<stdlib.h>
 
 // code steal from https://github.com/funny/crypto/blob/master/dh64/c/dh64.c, for test only.
-#define P 23
+#define P 0xffffffffffffffc5ull
 #define G 5
 
 static inline uint64_t

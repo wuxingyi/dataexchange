@@ -97,13 +97,13 @@ function step_7() {
 # 8 seller and datasource negociate secret key
 function step_8() {
     echo "STEP 8: seller and datasource negociate secret key"
-    # p=23, g=5, A=8, a=6, B=19, b=15, s=2
-    cleos push action dex uploadpuba ' ["seller1", 1, 8] ' -p seller1
-    cleos push action dex uploadpuba ' ["seller2", 2, 8] ' -p seller2
-    cleos push action dex uploadpuba ' ["seller3", 3, 8] ' -p seller3
-    cleos push action dex uploadpubb ' ["datasource1", 1, 19] ' -p datasource1
-    cleos push action dex uploadpubb ' ["datasource1", 2, 19] ' -p datasource1
-    cleos push action dex uploadpubb ' ["datasource1", 3, 19] ' -p datasource1
+    # p=ffffffffffffffc5, g=5, A=98128406754500292, a=8610715357444524147, B=12526033386409324239, b=15949919193124526316, s=7617149221468993112
+    cleos push action dex uploadpuba ' ["seller1", 1, 98128406754500292] ' -p seller1
+    cleos push action dex uploadpuba ' ["seller2", 2, 98128406754500292] ' -p seller2
+    cleos push action dex uploadpuba ' ["seller3", 3, 98128406754500292] ' -p seller3
+    cleos push action dex uploadpubb ' ["datasource1", 1, 12526033386409324239] ' -p datasource1
+    cleos push action dex uploadpubb ' ["datasource1", 2, 12526033386409324239] ' -p datasource1
+    cleos push action dex uploadpubb ' ["datasource1", 3, 12526033386409324239] ' -p datasource1
     cleos get table dex datasource1 marketorders
     cleos get table dex dex accounts
     cleos get table dex dex deals
@@ -127,7 +127,7 @@ function step_9() {
 # 10.buyer confirm the datahash(calling comfirmhash)
 function step_10() {
     echo "STEP 10: buyer comfirm the datahash"
-    # p=23, g=5, A=8, a=6, B=19, b=15, s=2
+    # p=ffffffffffffffc5, g=5, A=98128406754500292, a=8610715357444524147, B=12526033386409324239, b=15949919193124526316, s=7617149221468993112
     cleos push action dex confirmhash '[ "buyer1", 1]' -p buyer1 
     cleos push action dex confirmhash '[ "buyer1", 2]' -p buyer1 
     cleos push action dex confirmhash '[ "buyer2", 3]' -p buyer2
@@ -138,10 +138,10 @@ function step_10() {
 # 11.seller upload private a
 function step_11() {
     echo "STEP 11: seller upload private a"
-    # p=23, g=5, A=8, a=6, B=19, b=15, s=2
-    cleos push action dex uploadpria '[ "seller1", 1, 6 ]' -p seller1
-    cleos push action dex uploadpria '[ "seller2", 2, 6 ]' -p seller2
-    cleos push action dex uploadpria '[ "seller3", 3, 6 ]' -p seller3
+    # p=ffffffffffffffc5, g=5, A=98128406754500292, a=8610715357444524147, B=12526033386409324239, b=15949919193124526316, s=7617149221468993112
+    cleos push action dex uploadpria '[ "seller1", 1, 8610715357444524147 ]' -p seller1
+    cleos push action dex uploadpria '[ "seller2", 2, 8610715357444524147 ]' -p seller2
+    cleos push action dex uploadpria '[ "seller3", 3, 8610715357444524147 ]' -p seller3
     cleos get table dex dex accounts
     cleos get table dex dex deals
 }
@@ -149,9 +149,9 @@ function step_11() {
 # 12.datasource upload private b and wrong secret
 function step_12() {
     echo "STEP 12: datasource upload private b and wrong secret"
-    # p=23, g=5, A=8, a=6, B=19, b=15, s=2
-    cleos push action dex uploadprib '[0, 1, 15 ]' -p datasource1 
-    cleos push action dex uploadprib '[0, 2, 15 ]' -p datasource1 
+    # p=ffffffffffffffc5, g=5, A=98128406754500292, a=8610715357444524147, B=12526033386409324239, b=15949919193124526316, s=7617149221468993112
+    cleos push action dex uploadprib '[0, 1, 15949919193124526316 ]' -p datasource1 
+    cleos push action dex uploadprib '[0, 2, 15949919193124526316 ]' -p datasource1 
     cleos push action dex uploadprib '[0, 3, 10 ]' -p datasource1 
     cleos get table dex dex accounts
     cleos get table dex dex deals
