@@ -10,6 +10,7 @@ function step_1() {
     docker exec $container bash -c 'mongod &>> /dataexchange/local/share/eosio/nodeos/mongod.log & '
     docker exec $container bash -c 'keosd --http-server-address=127.0.0.1:8900 &>> keosd.log &'
     docker exec $container bash -c 'cd /dataexchange/dataexchange/dataexchange ; sh build.sh dex dataexchange'
+    # we sleep twice because staring mongod is time-consuming, cost nearly 20 seconds.
     sleep 10
     docker exec $container bash -c 'nodeos -e -p eosio --plugin eosio::chain_api_plugin --plugin eosio::history_api_plugin --contracts-console --http-server-address 0.0.0.0:8888 --plugin eosio::mongo_db_plugin --mongodb-uri mongodb://127.0.0.1:27017/dataexchange &>> /dataexchange/local/share/eosio/nodeos/nodeos.log &'
     sleep 5
