@@ -1,14 +1,21 @@
-alias cleos='docker exec 9a6b940339c6 /opt/eosio/bin/cleos -u http://localhost:8888 --wallet-url http://localhost:8900'
+container=df762864e6f8
+alias cleos="docker exec $container /opt/eosio/bin/cleos -u http://127.0.0.1:8888 --wallet-url http://127.0.0.1:8900"
 
 # 1: restart daemons, build/deploy contract and create accounts"
 function step_1() {
-    cleos wallet unlock --password=PW5JjCX7zZr35TcdUzCqzJAcb4cQcvKTTEutHCs9yoNLwiLaLKmNA
     echo "STEP 1: restart daemons, build/deploy contract and create accounts, issue tokens"
-    docker exec 9a6b940339c6 bash -c 'killall -9 nodeos keosd'
-    docker exec 9a6b940339c6 bash -c 'rm -rf /dataexchange/local/share/eosio/nodeos/data /dataexchange/local/share/eosio/nodeos/*.log'
-    docker exec 9a6b940339c6 bash -c 'nodeos -e -p eosio --plugin eosio::chain_api_plugin --plugin eosio::history_api_plugin --contracts-console --http-server-address 0.0.0.0:8888 &>> /dataexchange/local/share/eosio/nodeos/nodeos.log &'
-    docker exec 9a6b940339c6 bash -c 'keosd --http-server-address=127.0.0.1:8900 &>> keosd.log &'
-    docker exec 9a6b940339c6 bash -c 'cd /dataexchange/dataexchange/dataexchange ; sh build.sh dex dataexchange'
+    docker exec $container bash -c 'killall -9 nodeos keosd mongod'
+    docker exec $container bash -c 'rm -rf /dataexchange/local/mongodbdb/db/*'
+    docker exec $container bash -c 'rm -rf /dataexchange/local/share/eosio/nodeos/data /dataexchange/local/share/eosio/nodeos/*.log'
+    docker exec $container bash -c 'mongod &>> /dataexchange/local/share/eosio/nodeos/mongod.log & '
+    docker exec $container bash -c 'keosd --http-server-address=127.0.0.1:8900 &>> keosd.log &'
+    docker exec $container bash -c 'cd /dataexchange/dataexchange/dataexchange ; sh build.sh dex dataexchange'
+    sleep 10
+    docker exec $container bash -c 'nodeos -e -p eosio --plugin eosio::chain_api_plugin --plugin eosio::history_api_plugin --contracts-console --http-server-address 0.0.0.0:8888 --plugin eosio::mongo_db_plugin --mongodb-uri mongodb://127.0.0.1:27017/dataexchange &>> /dataexchange/local/share/eosio/nodeos/nodeos.log &'
+    sleep 5
+    cleos wallet unlock --password=PW5KXQqYAfSGsFkb1wdB9hhxcrjt2XbbncDJA3u6JAiPe4jZsfubh
+    cleos create account eosio dex EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+    cleos set contract dex /dataexchange/dataexchange/dataexchange
     cleos create account eosio datasource1 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
     cleos create account eosio datasource2 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
     cleos create account eosio seller1 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
@@ -34,6 +41,8 @@ function step_1() {
 # 2.two buyers all deposit their COIN to the contract
 function step_2() {
     echo "STEP 2: deposit some coins to contract"
+    # deposit twice for buyer1 because sometimes this action may failed by throwing a exception"transaction takes to long""
+    cleos push action dex deposit '[ "buyer1", "1000.0000 SYS" ]' -p buyer1
     cleos push action dex deposit '[ "buyer1", "1000.0000 SYS" ]' -p buyer1
     cleos push action dex deposit '[ "buyer2", "1000.0000 SYS" ]' -p buyer2
     cleos get currency balance xingyitoken buyer1
