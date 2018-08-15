@@ -44,7 +44,9 @@ def getonedeal(dealid):
     contents = storage.getvalue()
     s=json.loads(contents)
     alldeals = s['rows']
-    if len(alldeals) < 1:
+
+    #should have only one deal with specific dealid
+    if len(alldeals) != 1:
         print("no such deal")
         exit(-1)
     deal = alldeals[0]
