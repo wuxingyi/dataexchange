@@ -1,3 +1,7 @@
 *.wasm
 *.wast
 .vscode
+boost
+eosiolib
+libc++
+musl
