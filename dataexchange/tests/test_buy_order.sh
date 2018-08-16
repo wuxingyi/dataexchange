@@ -9,14 +9,14 @@ function step_1() {
     docker exec $container bash -c 'rm -rf /dataexchange/local/share/eosio/nodeos/data /dataexchange/local/share/eosio/nodeos/*.log'
     docker exec $container bash -c 'mongod &>> /dataexchange/local/share/eosio/nodeos/mongod.log & '
     docker exec $container bash -c 'keosd --http-server-address=127.0.0.1:8900 &>> keosd.log &'
-    docker exec $container bash -c 'cd /dataexchange/dataexchange/dataexchange ; sh build.sh dex dataexchange'
+    docker exec $container bash -c 'cd /dataexchange/dataexchange/dataexchange/contracts/dataexchange ; sh build.sh dex dataexchange'
     # we sleep twice because staring mongod is time-consuming, cost nearly 20 seconds.
     sleep 10
     docker exec $container bash -c 'nodeos -e -p eosio --plugin eosio::chain_api_plugin --plugin eosio::history_api_plugin --contracts-console --http-server-address 0.0.0.0:8888 --plugin eosio::mongo_db_plugin --mongodb-uri mongodb://127.0.0.1:27017/dataexchange &>> /dataexchange/local/share/eosio/nodeos/nodeos.log &'
     sleep 5
     cleos wallet unlock --password=PW5KXQqYAfSGsFkb1wdB9hhxcrjt2XbbncDJA3u6JAiPe4jZsfubh
     cleos create account eosio dex EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
-    cleos set contract dex /dataexchange/dataexchange/dataexchange
+    cleos set contract dex /dataexchange/dataexchange/dataexchange/contracts/dataexchange
     cleos create account eosio datasource1 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
     cleos create account eosio datasource2 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
     cleos create account eosio seller1 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
