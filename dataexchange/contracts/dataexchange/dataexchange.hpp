@@ -62,6 +62,10 @@ public:
     //@abi action
     void directdeal(account_name buyer, account_name seller, asset &price, string data_spec);
     //@abi action
+    void higherprice(account_name seller, uint64_t dealid, asset &price);
+    //@abi action
+    void directredeal(account_name buyer, uint64_t dealid, asset &price, string data_spec);
+    //@abi action
     void directhash(account_name buyer, account_name seller, asset &price);
     //@abi action
     void directack(account_name buyer, uint64_t dealid);
@@ -261,6 +265,6 @@ private:
     multi_index< N(accounts), account> _accounts;
 };
 EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(removeorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)
-           (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)(confirmhash)(directdeal)(directhash)(directack)(directsecret)
+           (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)(confirmhash)(directdeal)(directhash)(directack)(directsecret)(higherprice)(directredeal)
            (uploadpuba)(uploadpubb)(uploadpria)(uploadprib)
          )

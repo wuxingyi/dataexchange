@@ -794,7 +794,16 @@ void dataexchange::uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib)
     }
 }
 
+//this abi will generate an dealid
 void dataexchange::directdeal(account_name buyer, account_name seller, asset &price, string data_spec){
+
+}
+
+void dataexchange::higherprice(account_name seller, uint64_t dealid, asset &price) {
+    require_auth(seller);
+    return;
+}
+void dataexchange::directredeal(account_name buyer, uint64_t dealid, asset &price, string data_spec) {
 
 }
 
