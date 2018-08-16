@@ -794,7 +794,7 @@ void dataexchange::uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib)
     }
 }
 
-void dataexchange::directdeal(account_name buyer, account_name seller, asset &price){
+void dataexchange::directdeal(account_name buyer, account_name seller, asset &price, string data_spec){
 
 }
 

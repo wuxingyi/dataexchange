@@ -60,7 +60,7 @@ public:
     //@abi action
     void resumemkt(account_name owner, uint64_t marketid);
     //@abi action
-    void directdeal(account_name buyer, account_name seller, asset &price);
+    void directdeal(account_name buyer, account_name seller, asset &price, string data_spec);
     //@abi action
     void directhash(account_name buyer, account_name seller, asset &price);
     //@abi action
