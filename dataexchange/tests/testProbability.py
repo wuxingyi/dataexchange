@@ -18,6 +18,25 @@ def prob(total_chunks_nr, revealed_chunks_nr, corrupted_chunks_nr):
        q += comb(corrupted_chunks_nr,i) * comb(total_chunks_nr - corrupted_chunks_nr, revealed_chunks_nr-i)
     return (1 - q/s) 
 
+def testmaxreveal():
+    z = {}
+    for i in range(2, 2000):
+        z[i] = prob(i, i - 1, 1)
+        print z[i]
+
+    x=[]
+    y=[]
+    for i, p in z.items():
+        x.append(i)
+        y.append(p)
+    
+    figure()
+    plt.plot(x ,y ,'b',linewidth = 2, label = 'corrupt_nr=1, revealed_nr=total_nr-1')
+    plt.legend(loc="upper right")
+    plt.grid()
+    plt.show()
+    
+
 def testcorrupt():
     total_nr = 100
     revealed_nr = 60
@@ -60,5 +79,6 @@ def testreveal():
 
 
 if __name__ == '__main__':
-    testreveal()
+    #testreveal()
     #testcorrupt()
+    testmaxreveal()
