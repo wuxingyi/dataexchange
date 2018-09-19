@@ -21,6 +21,7 @@ public:
         _markets(_self, _self),
         _accounts(_self, _self),
         _availableid(_self, _self),
+        _fingerprints(_self, _self),
         _deals(_self, _self){}
 
     //@abi action
@@ -72,15 +73,19 @@ public:
     //@abi action
     void directsecret(uint64_t marketid, uint64_t dealid, string secret);
 
-    // abis for dh secret exchange
+    // abis for fair exchange
     //@abi action
-    void uploadpuba(account_name seller, uint64_t dealid, uint64_t puba);
+    void negotiate(account_name buyer, uint64_t dealid, uint64_t slices, uint64_t expiration, uint64_t sliceprice, uint64_t collateral);
     //@abi action
-    void uploadpubb(account_name datasource, uint64_t dealid, uint64_t pubb);
+    void renegotiate(uint64_t dealid, uint64_t slices, uint64_t expiration, uint64_t sliceprice, uint64_t collateral);
     //@abi action
-    void uploadpria(account_name seller, uint64_t dealid, uint64_t pria);
+    void confirmparam(account_name datasource, uint64_t dealid);
     //@abi action
-    void uploadprib(uint64_t marketid, uint64_t dealid, uint64_t prib);
+    void askforsecret(account_name buyer, uint64_t dealid);
+    //@abi action
+    void showsecret(account_name datasource, uint64_t dealid, string password);
+    //@abi action
+    void arbitrate(account_name datasource, uint64_t dealid, string encrypteddata);
 
 private:
     static const uint64_t typestart = 0;
@@ -111,12 +116,10 @@ private:
         uint64_t suspendedorders_nr;
         uint64_t finisheddeals_nr;
         uint64_t inflightdeals_nr;
-        uint64_t suspiciousdeals_nr;
         asset tradingincome_nr;
         asset tradingvolume_nr;
-        EOSLIB_SERIALIZE( marketstats, (totalopenorders_nr)(suspendedorders_nr)(finisheddeals_nr)(inflightdeals_nr)(suspiciousdeals_nr)(tradingincome_nr)(tradingvolume_nr))
+        EOSLIB_SERIALIZE( marketstats, (totalopenorders_nr)(suspendedorders_nr)(finisheddeals_nr)(inflightdeals_nr)(tradingincome_nr)(tradingvolume_nr))
     };
-
 
     //@abi table datamarkets i64
     struct datamarket {
@@ -155,17 +158,15 @@ private:
 
     static const uint64_t dealstate_start = 0;
     static const uint64_t dealstate_waitingauthorize = 1;
-    static const uint64_t dealstate_waitingpubA = 2;
-    static const uint64_t dealstate_waitingpubB = 3;
-    static const uint64_t dealstate_waitinghash = 4;
-    static const uint64_t dealstate_waitinghashcomfirm = 5;
-    static const uint64_t dealstate_waitingpria = 6;
-    static const uint64_t dealstate_waitingprib = 7;
+    static const uint64_t dealstate_waitingnegotiation = 2;
+    static const uint64_t dealstate_waitingnegotiationcomfirm = 3;
+    static const uint64_t dealstate_waitingslicehash = 4;
+    static const uint64_t dealstate_waitingslicehashcomfirm = 5;
+    static const uint64_t dealstate_waitingsecret = 7;
     static const uint64_t dealstate_canceled = 8;
     static const uint64_t dealstate_expired = 9;
     static const uint64_t dealstate_finished = 10;
-    static const uint64_t dealstate_wrongsecret = 11;
-    static const uint64_t dealstate_end = 12;
+    static const uint64_t dealstate_end = 11;
 
     // consts for ordertype
     static const uint64_t ordertype_start = 0;
@@ -173,13 +174,12 @@ private:
     static const uint64_t ordertype_bid = 2;
     static const uint64_t ordertype_end = 3;
 
-    // dh exchange parameters
-    struct dhparams {
-        uint64_t pubA;
-        uint64_t pubB;
-        uint64_t pria;
-        uint64_t prib;
-        EOSLIB_SERIALIZE( dhparams, (pubA)(pubB)(pria)(prib))
+    struct deliveryparams {
+        uint64_t slices;            
+        uint64_t expiration; 
+        uint64_t sliceprice;
+        uint64_t collateral;
+        EOSLIB_SERIALIZE( deliveryparams, (slices)(expiration)(sliceprice)(collateral))
     };
 
     //@abi table deals i64
@@ -193,14 +193,14 @@ private:
         uint64_t ordertype;
         uint64_t dealstate;
         string source_datahash;
-        string seller_datahash;
         string secret;
         asset price;
         time_point_sec expiretime;
-        dhparams dhp;
+        deliveryparams dp;
+        uint64_t deliverdslices;
 
         uint64_t primary_key() const { return dealid; }
-        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(ordertype)(dealstate)(source_datahash)(seller_datahash)(secret)(price)(expiretime)(dhp))
+        EOSLIB_SERIALIZE( deal, (dealid)(orderid)(marketid)(marketowner)(maker)(taker)(ordertype)(dealstate)(source_datahash)(secret)(price)(expiretime)(dp)(deliverdslices))
     }; 
     multi_index< N(deals), deal> _deals;
 
@@ -209,8 +209,7 @@ private:
         uint64_t o_finisheddeals_nr;
         asset o_finishedvolume_nr;
         uint64_t o_inflightdeals_nr;
-        uint64_t o_suspiciousdeals_nr;
-        EOSLIB_SERIALIZE( orderstats, (o_finisheddeals_nr)(o_finishedvolume_nr)(o_inflightdeals_nr)(o_suspiciousdeals_nr))
+        EOSLIB_SERIALIZE( orderstats, (o_finisheddeals_nr)(o_finishedvolume_nr)(o_inflightdeals_nr))
     };
 
     //@abi table marketorders i64
@@ -247,24 +246,37 @@ private:
     //those who have any token deposited to contract will got a entry in this table
     //and got erased after all fund withdrawed to reduce memory usage.
     struct account {
-       account_name owner;
-       asset        asset_balance;
-       string       pkey;
-       uint64_t     finished_deals;
-       uint64_t     inflightbuy_deals;
-       uint64_t     inflightsell_deals;
-       uint64_t     expired_deals;
-       uint64_t     suspicious_deals;
+        account_name owner;
+        asset        asset_balance;
+        asset        freezed_balance;
+        string       pkey;
+        uint64_t     finished_deals;
+        uint64_t     inflightbuy_deals;
+        uint64_t     inflightsell_deals;
+        uint64_t     expired_deals;
 
 
-       uint64_t primary_key()const { return owner; }
+        uint64_t primary_key()const { return owner; }
 
-       EOSLIB_SERIALIZE( account, (owner)(asset_balance)(pkey)(finished_deals)(inflightbuy_deals)(inflightsell_deals)(expired_deals)(suspicious_deals))
+        EOSLIB_SERIALIZE( account, (owner)(asset_balance)(freezed_balance)(pkey)(finished_deals)(inflightbuy_deals)(inflightsell_deals)(expired_deals))
     };
 
     multi_index< N(accounts), account> _accounts;
+
+    //@abi table fingerprints i64
+    struct fingerprint {
+        account_name dataowner;
+        //hash should be unique in this table because single data can only sell once.
+        uint64_t hash;
+
+        uint64_t primary_key()const { return hash; }
+
+        EOSLIB_SERIALIZE( fingerprint, (dataowner)(hash))
+    };
+
+    multi_index< N(fingerprints), fingerprint> _fingerprints;
 };
 EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(removeorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)
-           (authorize)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)(confirmhash)(directdeal)(directhash)(directack)(directsecret)(higherprice)(directredeal)
-           (uploadpuba)(uploadpubb)(uploadpria)(uploadprib)
+           (authorize)(negotiate)(renegotiate)(confirmparam)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)(confirmhash)(directdeal)(directhash)(directack)(directsecret)(higherprice)(directredeal)
+           (askforsecret)(showsecret)
          )
