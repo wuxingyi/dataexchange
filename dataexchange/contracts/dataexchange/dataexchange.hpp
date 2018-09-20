@@ -87,6 +87,11 @@ public:
     //@abi action
     void arbitrate(account_name datasource, uint64_t dealid, string encrypteddata);
 
+    //@abi action
+    void aesencrypt();
+    //@abi action
+    void aesdecrypt();
+
 private:
     static const uint64_t typestart = 0;
     static const uint64_t authorities = 1;
@@ -278,5 +283,5 @@ private:
 };
 EOSIO_ABI( dataexchange, (createmarket)(removemarket)(createorder)(removeorder)(canceldeal)(makedeal)(erasedeal)(uploadhash)(deposit)(withdraw)(regpkey)(deregpkey)
            (authorize)(negotiate)(renegotiate)(confirmparam)(suspendorder)(resumeorder)(suspendmkt)(resumemkt)(confirmhash)(directdeal)(directhash)(directack)(directsecret)(higherprice)(directredeal)
-           (askforsecret)(showsecret)
+           (askforsecret)(showsecret)(aesencrypt)(aesdecrypt)
          )
